@@ -37,8 +37,17 @@
 
   // ---------- Sign in: no PIN. The private link (…/#k=KEY) signs this device in once, for good. ----------
   function renderLogin(err = "") {
-    $app.innerHTML = `<div class="login"><h1>Life</h1><div class="sub">Open Life from your private link on this device once and it stays signed in.</div>
-      <div class="err" style="margin-top:14px">${esc(err)}</div></div>`;
+    $app.innerHTML = `<div class="login"><h1>Life</h1><div class="sub">Paste your private link once and this device stays signed in.</div>
+      <form id="lf"><input id="lk" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste private link" style="letter-spacing:0;font-size:16px;text-align:left">
+      <div class="err">${esc(err)}</div><button class="btn" style="width:100%">Sign in</button></form></div>`;
+    document.getElementById("lf").onsubmit = async (e) => {
+      e.preventDefault();
+      const raw = document.getElementById("lk").value.trim(), m = raw.match(/k=([^&\s]+)/);
+      try {
+        const d = await api("login", { method: "POST", body: { key: decodeURIComponent(m ? m[1] : raw) } });
+        token = d.token; store.set("life.token", token); boot();
+      } catch (x) { if (x.message !== "signin") renderLogin(x.message); }
+    };
   }
   async function linkSignIn() {
     const m = location.hash.match(/^#k=([^&]+)/);
