@@ -4,6 +4,7 @@ import { pushReady, hashOf, sendPush } from "../lib/push.mjs";
 import { trimData, moneyData } from "../lib/feeds.mjs";
 import { vault } from "../lib/vault.mjs";
 import { gunvault } from "../lib/gunvault.mjs";
+import { passwords } from "../lib/passwords.mjs";
 import { parcelReady, checkPackages, guessCarrier, clean } from "../lib/parcel.mjs";
 
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
@@ -90,6 +91,7 @@ export default async (req) => {
     if (parts[0] === "money") return json(await moneyData(s));
     if (parts[0] === "vault") return vault(req, s, parts.slice(1));
     if (parts[0] === "gv") return gunvault(req, s, parts.slice(1));
+    if (parts[0] === "pw" && !parts[1]) return passwords(req, s);
 
     if (parts[0] === "pkgs" && parts[1] === "check" && m === "POST") {
       const r = await checkPackages(s);

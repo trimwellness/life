@@ -92,13 +92,14 @@
     check: '<path d="M8.5 12.5l2.5 2.5 5-6"/><rect x="3.5" y="3.5" width="17" height="17" rx="4"/>',
     box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
     gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
   };
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
   const top = (title, right = "") => {
     const isTab = TABS.some(([r]) => r === route());
-    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger" }[title] || "Life";
+    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted" }[title] || "Life";
     return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1 data-eyebrow="${eyebrow}">${title}</h1>`;
   };
 
@@ -123,7 +124,7 @@
   let lastRoute = null;
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
     $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
@@ -278,8 +279,8 @@
         <div><div class="lbl">Year</div><div class="v">${usd(trim.ytd.sales, false)}</div></div></div>`;
     }
 
-    const box = (href, ic, title, val, sub, i) => `<a class="lux qbox" href="#${href}" style="--i:${i}"><div class="lux-h"><span>${title}</span><span class="aic">${svg(ic)}</span></div>
-      <div class="qv">${val === "" ? "<span class=\"soon\">Soon</span>" : n(val)}</div><div class="qs">${sub}</div></a>`;
+    const box = (href, ic, title, val, sub, i, fmt) => `<a class="lux qbox" href="#${href}" style="--i:${i}"><div class="lux-h"><span>${title}</span><span class="aic">${svg(ic)}</span></div>
+      <div class="qv">${val === "" ? `<span class="qlock">${svg("lock")}</span>` : n(val, fmt)}</div><div class="qs">${sub}</div></a>`;
     const row = (href, ic, title, sub, val, i) => `<a class="arow" href="#${href}" style="--i:${i}"><span class="aic">${svg(ic)}</span>
       <span class="grow"><span class="at">${title}</span><span class="as">${sub}</span></span><span class="av">${val}</span><span class="chev">›</span></a>`;
     const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
@@ -300,10 +301,10 @@
         ${box("pkgs", "box", "Incoming", active.length + trimIn, nextPkg, 3)}
         ${box("wish", "gift", "Wish List", wishes.length, wishes.length ? usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false) + " total" : "Empty", 4)}
         ${box("photos", "photo", "Photo Vault", PV.albums ? PV.total || 0 : 0, PV.albums ? `${PV.albums.length} album${PV.albums.length === 1 ? "" : "s"}` : "Your albums", 5)}
+        ${(() => { const t = gvTotals(); return box("guns", "shield", "Gun Vault", t ? Math.round(t.all) : 0, t ? `${GV.data.firearms.length} firearms · ${GV.data.nfa.length} NFA` : "Safe Ledger", 6, "usd"); })()}
+        ${box("keys", "lock", "Passwords", "", PW.key ? `${PW.vault.items.length} logins` : "Encrypted · tap to unlock", 7)}
       </div>
-      ${(() => { const t = gvTotals(); if (!t) return ""; return `<a class="lux" href="#guns" style="--i:6"><div class="lux-h"><span>Gun Vault</span><span class="chev">›</span></div>
-        <div class="lbl">Collection value</div><div class="hero-num">${n(Math.round(t.all), "usd")}</div>
-        <div class="cols"><div><div class="lbl">Firearms</div><div class="v">${GV.data.firearms.length}</div></div><div><div class="lbl">NFA</div><div class="v">${GV.data.nfa.length}</div></div><div><div class="lbl">Mags</div><div class="v">${magCount()}</div></div></div></a>`; })()}`;
+`;
   }
 
   // Original business maxims, one per day of the year.
@@ -854,6 +855,126 @@
     closeSheet(); render();
   }
 
+  // ---------- Passwords: encrypted on this phone with your master password; the server only stores ciphertext ----------
+  const PW = { key: null, vault: null, meta: null, q: "", reveal: {}, err: "", busy: false, timer: 0 };
+  const PW_ITER = 600000;
+  const b64e = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  async function pwDerive(master, salt, iter) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(master), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function pwEncrypt(key, obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
+    const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return b64e(out);
+  }
+  async function pwDecrypt(key, data) { const raw = b64d(data); return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12)))); }
+  function pwLock() { PW.key = null; PW.vault = null; PW.reveal = {}; clearTimeout(PW.timer); closeSheet(); if (route() === "keys") render(); }
+  const pwTouch = () => { clearTimeout(PW.timer); if (PW.key) PW.timer = setTimeout(pwLock, 5 * 60e3); };
+  let pwHidden = 0;
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pwHidden = Date.now(); else if (PW.key && Date.now() - pwHidden > 60e3) pwLock(); });
+  ["click", "keydown", "touchstart"].forEach((ev) => document.addEventListener(ev, () => PW.key && pwTouch(), { passive: true }));
+
+  async function pwLoad() { try { PW.meta = await api("pw"); } catch (e) { PW.meta = { error: e.message }; } if (route() === "keys") render(); }
+  async function pwPersist() {
+    const data = await pwEncrypt(PW.key, PW.vault);
+    const r = await api("pw", { method: "PUT", body: { data, salt: PW.meta.salt, iter: PW.meta.iter, ver: PW.meta.ver } });
+    PW.meta = { ...PW.meta, data, ver: r.ver };
+  }
+  function pwGen(n = 20) {
+    const sets = ["ABCDEFGHJKLMNPQRSTUVWXYZ", "abcdefghijkmnopqrstuvwxyz", "23456789", "!@#$%^&*-_=+?"], all = sets.join("");
+    const rnd = (m) => { const a = new Uint32Array(1); let x; do { crypto.getRandomValues(a); x = a[0]; } while (x >= Math.floor(2 ** 32 / m) * m); return x % m; };
+    const out = sets.map((s) => s[rnd(s.length)]); while (out.length < n) out.push(all[rnd(all.length)]);
+    for (let i = out.length - 1; i > 0; i--) { const j = rnd(i + 1); [out[i], out[j]] = [out[j], out[i]]; }
+    return out.join("");
+  }
+  const host = (u) => { try { return new URL(/^https?:/i.test(u) ? u : "https://" + u).hostname.replace(/^www\./, ""); } catch (_) { return ""; } };
+
+  function pKeys() {
+    const lockBtn = PW.key ? `<button class="btn ghost sm" data-act="pw-lock">Lock</button>` : "";
+    const head = top("Passwords", PW.key ? `<button class="btn ghost sm" data-act="pw-new">+ Add</button>` : "").replace('<div style="flex:1"></div>', `<div style="flex:1"></div>${lockBtn}<span style="width:8px"></span>`);
+    if (!PW.meta) { setTimeout(pwLoad, 0); return head + `<div class="empty">Loading…</div>`; }
+    if (PW.meta.error) return head + `<div class="empty">${esc(PW.meta.error)}</div>`;
+    if (!PW.key) {
+      const first = PW.meta.empty;
+      return head + `<div class="lux pw-lockcard" style="--i:0"><div class="pw-lockic">${svg("lock")}</div>
+        <div class="hero-num" style="font-size:26px;text-align:center">${first ? "Create your master password" : "Locked"}</div>
+        <div class="sub" style="text-align:center;margin:6px 0 16px">${first ? "Everything is encrypted on this phone with it. Nobody can reset it, not even me, so pick something you won't forget." : "Enter your master password."}</div>
+        <form data-form="${first ? "pw-create" : "pw-unlock"}"><input name="m" type="password" autocomplete="off" placeholder="Master password" required minlength="${first ? 10 : 1}">
+        ${first ? `<input name="m2" type="password" autocomplete="off" placeholder="Type it again" required style="margin-top:8px">` : ""}
+        <div class="err">${esc(PW.err)}</div><button class="btn" style="width:100%;margin-top:10px" ${PW.busy ? "disabled" : ""}>${PW.busy ? "Working…" : first ? "Create vault" : "Unlock"}</button></form></div>`;
+    }
+    const q = PW.q.toLowerCase(), items = [...PW.vault.items].sort((a, b) => a.title.localeCompare(b.title)).filter((x) => !q || [x.title, x.user, x.url].join(" ").toLowerCase().includes(q));
+    return head + `<input class="pw-search" placeholder="Search ${PW.vault.items.length} logins" value="${esc(PW.q)}" data-pwsearch autocomplete="off">
+      ${items.length ? `<div class="list">${items.map((x) => `<div class="item pw-item" data-act="pw-open" data-id="${x.id}"><span class="pw-av">${esc((x.title || "?")[0].toUpperCase())}</span>
+        <div class="grow"><div class="t">${esc(x.title)}</div><div class="sub">${esc(x.user || host(x.url) || "")}</div></div>
+        <button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="pass">Copy</button></div>`).join("")}</div>`
+        : `<div class="empty">${PW.vault.items.length ? "No matches." : "No logins yet. Tap + Add."}</div>`}
+      <div class="sub" style="text-align:center;margin-top:18px">Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
+  }
+  const pwItem = (id) => PW.vault.items.find((x) => x.id === id);
+  function pwOpen(x) {
+    const r = PW.reveal[x.id];
+    const row = (k, v, f, extra = "") => v ? `<div class="pw-row"><div class="grow"><div class="lbl">${k}</div><div class="pw-v ${f === "pass" ? "mono" : ""}">${esc(v)}</div></div>${extra}<button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="${f}">Copy</button></div>` : "";
+    sheet(`<h2>${esc(x.title)}</h2>
+      ${row("Username", x.user, "user")}
+      ${row("Password", r ? x.pass : "••••••••••", "pass", `<button class="btn ghost sm" data-act="pw-reveal" data-id="${x.id}">${r ? "Hide" : "Show"}</button>`)}
+      ${x.url ? `<div class="pw-row"><div class="grow"><div class="lbl">Website</div><div class="pw-v">${esc(x.url)}</div></div><a class="btn ghost sm" href="${esc(/^https?:/i.test(x.url) ? x.url : "https://" + x.url)}" target="_blank" rel="noopener">Open</a></div>` : ""}
+      ${x.notes ? `<div class="lbl" style="margin-top:12px">Notes</div><div class="gv-notes" style="margin-top:4px">${esc(x.notes)}</div>` : ""}
+      <div class="actions"><button type="button" class="btn danger" data-act="pw-del" data-id="${x.id}">Delete</button><span class="sp"></span><button class="btn ghost" data-act="close">Close</button><button class="btn" data-act="pw-edit" data-id="${x.id}">Edit</button></div>`);
+  }
+  function pwForm(x = {}) {
+    sheet(`<h2>${x.id ? "Edit login" : "Add login"}</h2><form data-form="pw-save" data-id="${x.id || ""}">
+      <label>Name</label><input name="title" value="${esc(x.title)}" placeholder="e.g. Chase" required autocomplete="off">
+      <label>Username or email</label><input name="user" value="${esc(x.user)}" autocomplete="off" autocapitalize="off">
+      <label>Password</label><div class="row"><input name="pass" value="${esc(x.pass)}" class="grow mono" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="btn ghost sm" data-act="pw-gen">Generate</button></div>
+      <label>Website</label><input name="url" value="${esc(x.url)}" placeholder="chase.com" autocomplete="off" autocapitalize="off">
+      <label>Notes</label><textarea name="notes">${esc(x.notes)}</textarea>
+      <div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
+  }
+  async function pwCopy(text) {
+    try { await navigator.clipboard.writeText(text); toast("Copied"); }
+    catch (_) { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("Copied"); }
+  }
+  document.addEventListener("input", (e) => { if (e.target.matches("[data-pwsearch]")) { PW.q = e.target.value; const pos = e.target.selectionStart; render(); const s = document.querySelector("[data-pwsearch]"); if (s) { s.focus(); s.setSelectionRange(pos, pos); } } });
+  async function pwSubmit(f, v) {
+    const kind = f.dataset.form;
+    if (kind === "pw-create" || kind === "pw-unlock") {
+      PW.err = ""; PW.busy = true; render();
+      try {
+        if (kind === "pw-create") {
+          if (v.m !== v.m2) throw new Error("Those don’t match");
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          PW.key = await pwDerive(v.m, salt, PW_ITER); PW.vault = { items: [] };
+          PW.meta = { salt: b64e(salt), iter: PW_ITER, ver: 0 };
+          await pwPersist();
+        } else {
+          PW.meta = await api("pw");
+          const key = await pwDerive(v.m, b64d(PW.meta.salt), PW.meta.iter);
+          try { PW.vault = await pwDecrypt(key, PW.meta.data); } catch (_) { throw new Error("Wrong master password"); }
+          PW.key = key;
+        }
+        pwTouch();
+      } catch (e) { PW.key = null; PW.err = e.message; }
+      PW.busy = false; render(); return;
+    }
+    if (kind === "pw-save") {
+      const id = f.dataset.id, item = { id: id || newPwId(), title: v.title.trim(), user: v.user.trim(), pass: v.pass, url: v.url.trim(), notes: v.notes, at: Date.now() };
+      const i = PW.vault.items.findIndex((x) => x.id === id);
+      i >= 0 ? (PW.vault.items[i] = item) : PW.vault.items.push(item);
+      await pwPersist(); closeSheet(); render(); toast("Saved");
+    }
+    if (kind === "pw-newmaster") {
+      if (v.m.length < 10) throw new Error("Use at least 10 characters");
+      if (v.m !== v.m2) throw new Error("Those don’t match");
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      PW.key = await pwDerive(v.m, salt, PW_ITER); PW.meta = { ...PW.meta, salt: b64e(salt), iter: PW_ITER };
+      await pwPersist(); closeSheet(); toast("Master password changed");
+    }
+  }
+  const newPwId = () => b64e(crypto.getRandomValues(new Uint8Array(9))).replace(/[+/=]/g, "x");
+
   // ---------- Gerald ----------
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
@@ -954,6 +1075,15 @@
         case "pv-amenu": albumSheet(PV.album); break;
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
+        case "pw-lock": pwLock(); break;
+        case "pw-new": pwForm(); break;
+        case "pw-open": pwOpen(pwItem(id)); break;
+        case "pw-edit": pwForm(pwItem(id)); break;
+        case "pw-reveal": PW.reveal[id] = !PW.reveal[id]; pwOpen(pwItem(id)); break;
+        case "pw-copy": { const x = pwItem(id); if (x) pwCopy(x[el.dataset.f] || ""); break; }
+        case "pw-gen": { const i = el.closest("form").querySelector("[name=pass]"); i.value = pwGen(); break; }
+        case "pw-del": if (confirmDel()) { PW.vault.items = PW.vault.items.filter((x) => x.id !== id); await pwPersist(); closeSheet(); render(); toast("Deleted"); } break;
+        case "pw-change": sheet(`<h2>New master password</h2><form data-form="pw-newmaster"><input name="m" type="password" autocomplete="off" placeholder="New master password" required><input name="m2" type="password" autocomplete="off" placeholder="Type it again" required style="margin-top:8px"><div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Change</button></div></form>`); break;
         case "gv-tab": GV.tab = id; render(); break;
         case "gv-open": GV.open[id] = !GV.open[id]; render(); break;
         case "gv-serial": GV.serial[id] = !GV.serial[id]; render(); break;
@@ -991,6 +1121,7 @@
       switch (f.dataset.form) {
         case "gerald": f.reset(); askGerald(v.q); break;
         case "gv-save": await gvSubmit(f); break;
+        case "pw-create": case "pw-unlock": case "pw-save": case "pw-newmaster": await pwSubmit(f, v); break;
         case "pv-album": {
           if (id) { const r = await api(`vault/albums/${id}`, { method: "PUT", body: { name: v.name } }); PV.album = { ...PV.album, name: r.name }; }
           else { const r = await api("vault/albums", { method: "POST", body: { name: v.name } }); PV.albums = [...(PV.albums || []), r]; closeSheet(); openAlbum(r.id); break; }
