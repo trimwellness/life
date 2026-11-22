@@ -2,7 +2,6 @@
 import { store, COLS, env, json, clip, num, newId, readPrefix, makeToken, signedIn, same } from "../lib/common.mjs";
 import { pushReady, hashOf, sendPush } from "../lib/push.mjs";
 import { parcelReady, checkPackages, guessCarrier, clean } from "../lib/parcel.mjs";
-import { GUNS } from "../lib/seed-guns.mjs";
 
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
@@ -10,8 +9,6 @@ const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const CLEAN = {
   todo: (b, old = {}) => ({ text: clip(b.text, 300), due: /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : "", done: !!b.done, doneAt: b.done ? old.doneAt || Date.now() : null, notes: clip(b.notes, 1000) }),
   wish: (b, old = {}) => ({ name: clip(b.name, 200), url: /^https?:\/\//i.test(b.url || "") ? clip(b.url, 1000) : "", price: num(b.price), priority: ["high", "med", "low"].includes(b.priority) ? b.priority : "med", notes: clip(b.notes, 1000), got: !!b.got, gotAt: b.got ? old.gotAt || Date.now() : null }),
-  guns: (b) => ({ group: ["firearm", "gear", "spare"].includes(b.group) ? b.group : "firearm", name: clip(b.name, 200), notes: clip(b.notes, 1000), order: num(b.order),
-    items: (Array.isArray(b.items) ? b.items : []).slice(0, 60).map((i) => ({ name: clip(i.name, 200), price: num(i.price) })).filter((i) => i.name) }),
   pkgs: (b, old = {}) => {
     const tracking = clean(b.tracking).slice(0, 40);
     const carrier = ["usps", "ups", "fedex", "dhl", "intl", "amazon"].includes(b.carrier) ? b.carrier : guessCarrier(tracking);
@@ -20,10 +17,13 @@ const CLEAN = {
   },
 };
 
-async function seed(s) {
-  if (await s.get("meta/seeded", { type: "json" })) return;
-  await s.setJSON("meta/seeded", { at: Date.now() });
-  await Promise.all(GUNS.map((x, i) => s.setJSON("guns/" + newId(), { ...x, order: i })));
+// The gun ledger was removed; clear any of its saved data once.
+async function clearGuns(s) {
+  if (await s.get("meta/guns-cleared", { type: "json" })) return;
+  const { blobs } = await s.list({ prefix: "guns/" });
+  await Promise.all(blobs.map((b) => s.delete(b.key)));
+  await s.delete("meta/seeded");
+  await s.setJSON("meta/guns-cleared", { at: Date.now() });
 }
 
 async function login(req, s) {
@@ -96,7 +96,7 @@ export default async (req) => {
 
   try {
     if (parts[0] === "all" && m === "GET") {
-      await seed(s);
+      await clearGuns(s);
       const out = {};
       for (const c of COLS) out[c] = await readPrefix(s, c + "/");
       out.status = { parcel: parcelReady(), push: pushReady(), finance: !!env("FINANCE_PIN"), trim: !!env("LIFE_FEED_KEY"), photos: !!env("MS_CLIENT_ID") };

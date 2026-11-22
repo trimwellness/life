@@ -1,4 +1,4 @@
-// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #guns, #trim, #pkgs, #money, #photos).
+// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #trim, #pkgs, #money, #photos).
 (() => {
   const $app = document.getElementById("app");
   const store = {
@@ -6,13 +6,12 @@
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} },
   };
   let token = store.get("life.token");
-  let D = { todo: [], wish: [], guns: [], pkgs: [], status: {} };
+  let D = { todo: [], wish: [], pkgs: [], status: {} };
   let trim = null, money = null;
   const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const usd = (n, cents = true) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
-  const sumItems = (g) => (g.items || []).reduce((t, i) => t + (+i.price || 0), 0);
   const todayKey = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const fmtDay = (k) => new Date(k + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const ago = (t) => { if (!t) return ""; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? m + "m ago" : m < 1440 ? Math.round(m / 60) + "h ago" : Math.round(m / 1440) + "d ago"; };
@@ -80,7 +79,7 @@
 
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, guns: pGuns, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos }[r] || pHome;
     $app.innerHTML = page();
   }
 
@@ -89,7 +88,6 @@
     const open = D.todo.filter((t) => !t.done), dueToday = open.filter((t) => t.due && t.due <= todayKey()).length;
     const wishes = D.wish.filter((w) => !w.got);
     const active = D.pkgs.filter((p) => !p.delivered && !p.archived), ofd = active.filter((p) => p.statusCode === 4).length;
-    const gunVal = D.guns.reduce((t, g) => t + sumItems(g), 0), gunCount = D.guns.filter((g) => g.group === "firearm").length;
     const hr = new Date().getHours(), hello = hr < 12 ? "Morning" : hr < 17 ? "Afternoon" : "Evening";
     const moneyTile = money?.ready ? `<div class="big money">${usd(money.cash ?? 0, false)}</div><div class="sm">Cash across accounts</div>` : `<div class="sm">${esc(money?.why || "Loading…")}</div>`;
     const trimTile = trim?.ready ? `<div class="big money">${usd(trim.daily.sales, false)}</div><div class="sm">Today · ${usd(trim.wtd.sales, false)} this week</div>` : `<div class="sm">${esc(trim?.why || "Loading…")}</div>`;
@@ -100,7 +98,6 @@
       <a class="tile" href="#todo"><div><div class="ic">✅</div><div class="nm">To-Do</div></div><div><div class="big">${open.length}</div><div class="sm">${dueToday ? dueToday + " due today or late" : "open"}</div></div></a>
       <a class="tile" href="#pkgs"><div><div class="ic">📦</div><div class="nm">Packages</div></div><div><div class="big">${active.length}</div><div class="sm">${ofd ? ofd + " out for delivery" : "on the way"}</div></div></a>
       <a class="tile" href="#wish"><div><div class="ic">🎁</div><div class="nm">Wish List</div></div><div><div class="big">${wishes.length}</div><div class="sm">${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} total</div></div></a>
-      <a class="tile" href="#guns"><div><div class="ic">🔒</div><div class="nm">Gun Ledger</div></div><div><div class="big money">${usd(gunVal, false)}</div><div class="sm">${gunCount} firearms</div></div></a>
       <a class="tile" href="#photos"><div><div class="ic">🖼️</div><div class="nm">Photo Vault</div></div><div class="sm">OneDrive folders</div></a>
     </div>`;
   }
@@ -146,44 +143,6 @@
       <label>Notes</label><textarea name="notes">${esc(w.notes)}</textarea>
       <div class="actions">${w.id ? `<button type="button" class="btn danger" data-act="wish-del" data-id="${w.id}">Delete</button>` : ""}<span class="sp"></span>
       <button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
-  }
-
-  // ---------- Gun ledger ----------
-  function pGuns() {
-    const by = (grp) => D.guns.filter((g) => g.group === grp).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
-    const fire = by("firearm"), gear = by("gear"), spare = by("spare");
-    const fTot = fire.reduce((t, g) => t + sumItems(g), 0), gTot = gear.reduce((t, g) => t + sumItems(g), 0), sTot = spare.reduce((t, g) => t + sumItems(g), 0);
-    const card = (g, i) => {
-      const open = ui.open[g.id];
-      return `<div class="card gun"><div class="head" data-act="gun-open" data-id="${g.id}">
-        <div class="grow" style="flex:1"><div style="font-weight:600">${g.group === "firearm" ? i + 1 + ". " : ""}${esc(g.name)}</div>
-        <div class="sub">${g.items.length > 1 ? g.items.length - 1 + " mod" + (g.items.length === 2 ? "" : "s") : "No mods tracked"}</div></div>
-        <div class="money" style="font-weight:700">${usd(sumItems(g))}</div><span class="sub">${open ? "▾" : "▸"}</span></div>
-        ${open ? `<div class="mods">${g.items.map((it) => `<div class="mod"><span>${esc(it.name)}</span><span class="money">${usd(it.price)}</span></div>`).join("")}
-        ${g.notes ? `<div class="note">${esc(g.notes)}</div>` : ""}<div class="actions"><span class="sp"></span><button class="btn ghost sm" data-act="gun-edit" data-id="${g.id}">Edit</button></div></div>` : ""}</div>`;
-    };
-    return top("Gun Ledger", `<button class="btn sm" data-act="gun-new">+ Add</button>`) + `
-      <div class="stats" style="margin-top:12px"><div class="stat wide"><div class="k">Collection + equipment</div><div class="v money">${usd(fTot + gTot + sTot)}</div>
-      <div class="s">${fire.length} firearms ${usd(fTot)} · unassigned ${usd(gTot)} · spare ${usd(sTot)}</div></div></div>
-      <h3>Firearms</h3>${fire.map(card).join("")}
-      ${gear.length ? `<h3>Unassigned suppressors &amp; gear</h3>${gear.map(card).join("")}` : ""}
-      ${spare.length ? `<h3>Spare equipment</h3>${spare.map(card).join("")}` : ""}`;
-  }
-  function gunForm(g = { group: "firearm", items: [{ name: "", price: "" }] }) {
-    const others = D.guns.filter((x) => x.id !== g.id).sort((a, b) => a.name.localeCompare(b.name));
-    const modRow = (it, i) => `<div class="modrow" data-mod>
-      <input name="mn" value="${esc(it.name)}" placeholder="${i ? "Mod / accessory" : "The gun itself"}">
-      <input name="mp" value="${it.price ?? ""}" inputmode="decimal" placeholder="$">
-      ${i ? `<select name="mv" title="Move to" style="padding:0 2px;font-size:12px"><option value="">⋯</option><option value="__del">Remove</option>${others.map((o) => `<option value="${o.id}">→ ${esc(o.name)}</option>`).join("")}</select>` : "<span></span>"}</div>`;
-    sheet(`<h2>${g.id ? "Edit" : "Add"}</h2><form data-form="gun-save" data-id="${g.id || ""}">
-      <label>Name</label><input name="name" value="${esc(g.name)}" required>
-      <label>Section</label><select name="group">${[["firearm", "Firearm / build"], ["gear", "Unassigned suppressor / gear"], ["spare", "Spare equipment"]].map(([v, t]) => `<option value="${v}" ${g.group === v ? "selected" : ""}>${t}</option>`).join("")}</select>
-      <label>Items — first line is the gun; the ⋯ menu moves a mod to another gun</label><div id="mods">${g.items.map(modRow).join("")}</div>
-      <button type="button" class="btn ghost sm" data-act="gun-addmod">+ Add mod</button>
-      <label>Notes</label><textarea name="notes">${esc(g.notes)}</textarea>
-      <div class="actions">${g.id ? `<button type="button" class="btn danger" data-act="gun-del" data-id="${g.id}">Delete</button>` : ""}<span class="sp"></span>
-      <button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
-    window.__modRow = modRow;
   }
 
   // ---------- Trim sales ----------
@@ -326,11 +285,7 @@
         case "wish-toggle": { const w = find("wish"); await save("wish", { ...w, got: !w.got }); break; }
         case "wish-showgot": ui.wishShowGot = !ui.wishShowGot; render(); break;
         case "wish-del": if (confirmDel()) { await remove("wish", id); closeSheet(); } break;
-        case "gun-open": case "pkg-open": ui.open[id] = !ui.open[id]; render(); break;
-        case "gun-new": gunForm(); break;
-        case "gun-edit": gunForm(find("guns")); break;
-        case "gun-addmod": document.getElementById("mods").insertAdjacentHTML("beforeend", window.__modRow({ name: "", price: "" }, 1)); break;
-        case "gun-del": if (confirmDel()) { await remove("guns", id); closeSheet(); } break;
+        case "pkg-open": ui.open[id] = !ui.open[id]; render(); break;
         case "trim-refresh": trim = null; render(); loadTrim(); break;
         case "money-refresh": money = null; render(); loadMoney(); break;
         case "pkg-check": {
@@ -373,18 +328,6 @@
         case "todo-save": { const t = D.todo.find((x) => x.id === id); await save("todo", { ...t, text: v.text, due: v.due, notes: v.notes }); closeSheet(); break; }
         case "wish-save": { const w = D.wish.find((x) => x.id === id) || {}; await save("wish", { ...w, id, ...v }); closeSheet(); break; }
         case "pkg-add": await save("pkgs", { tracking: v.tracking, label: v.label, from: v.from }); toast("Tracking"); break;
-        case "gun-save": {
-          const rows = [...f.querySelectorAll("[data-mod]")].map((r) => ({ name: r.querySelector("[name=mn]").value.trim(), price: r.querySelector("[name=mp]").value.replace(/[$,]/g, ""), mv: r.querySelector("[name=mv]")?.value || "" }));
-          const keep = rows.filter((r) => r.name && !r.mv).map(({ name, price }) => ({ name, price: +price || 0 }));
-          const old = D.guns.find((x) => x.id === id) || {};
-          await save("guns", { ...old, id, name: v.name, group: v.group, notes: v.notes, order: old.order ?? D.guns.length, items: keep });
-          // Moved mods go onto the other gun.
-          for (const r of rows.filter((r) => r.name && r.mv && r.mv !== "__del")) {
-            const to = D.guns.find((x) => x.id === r.mv);
-            if (to) await save("guns", { ...to, items: [...to.items, { name: r.name, price: +r.price || 0 }] });
-          }
-          closeSheet(); break;
-        }
       }
     } catch (x) { if (x.message !== "signin") toast(x.message); }
     finally { if (btn) btn.disabled = false; }
