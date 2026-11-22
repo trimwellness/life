@@ -100,7 +100,8 @@ async function runTool(s, name, a) {
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   if (!(await signedIn(req))) return json({ error: "signin" }, 401);
-  if (!process.env.ANTHROPIC_BASE_URL && !process.env.ANTHROPIC_API_KEY) return json({ error: "Gerald’s AI connection isn’t active on this Netlify project yet." }, 503);
+  const has = (k) => !!(process.env[k] || Netlify.env.get(k));
+  console.log("gerald env", JSON.stringify({ base: has("ANTHROPIC_BASE_URL"), key: has("ANTHROPIC_API_KEY"), gw: has("NETLIFY_AI_GATEWAY_URL"), gwKey: has("NETLIFY_AI_GATEWAY_KEY") }));
 
   const b = await req.json().catch(() => ({}));
   const history = (Array.isArray(b.messages) ? b.messages : []).slice(-16)
@@ -115,7 +116,10 @@ export default async (req) => {
     trimData().catch((e) => ({ ready: false, why: e.message })), moneyData(s, 400).catch((e) => ({ ready: false, why: e.message })),
   ]);
 
-  const ai = new Anthropic();
+  // Netlify's AI Gateway normally fills in ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL; pass them explicitly in case
+  // they're only visible through Netlify.env.
+  const v = (k) => process.env[k] || Netlify.env.get(k) || undefined;
+  const ai = new Anthropic({ apiKey: v("ANTHROPIC_API_KEY"), baseURL: v("ANTHROPIC_BASE_URL") });
   const messages = [...history];
   let changed = false, reply = "";
   try {
