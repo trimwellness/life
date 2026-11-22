@@ -150,10 +150,10 @@
     const F = "-apple-system,Helvetica,Arial,sans-serif";
     // Tachymeter bezel: speed = 3600 / elapsed seconds.
     const tach = [60, 65, 70, 75, 80, 90, 100, 110, 120, 130, 150, 170, 200, 240, 300, 400, 500];
-    const bez = tach.map((v) => { const a = (3600 / v) * 6 % 360, [x, y] = P(a, 131); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="8.4" font-weight="600" fill="#f2f2f2" font-family="${F}" transform="rotate(${a} ${x.toFixed(1)} ${(y + 3).toFixed(1)})">${v}</text>`; }).join("");
-    const bezTicks = Array.from({ length: 120 }, (_, i) => { const sec = 7.2 + i * 0.44; return sec < 60 ? L(sec * 6, 139, i % 5 ? 136 : 134, `stroke="#e6e6e6" stroke-width="${i % 5 ? 0.5 : 0.9}"`) : ""; }).join("");
+    const bez = tach.map((v) => { const a = (3600 / v) * 6 % 360, [x, y] = P(a, 131); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="8.4" font-weight="600" fill="#e9d38a" font-family="${F}" transform="rotate(${a} ${x.toFixed(1)} ${(y + 3).toFixed(1)})">${v}</text>`; }).join("");
+    const bezTicks = Array.from({ length: 120 }, (_, i) => { const sec = 7.2 + i * 0.44; return sec < 60 ? L(sec * 6, 139, i % 5 ? 136 : 134, `stroke="#c9a54e" stroke-width="${i % 5 ? 0.5 : 0.9}"`) : ""; }).join("");
     const track = [], idx = [];
-    for (let i = 0; i < 240; i++) { const big = i % 20 === 0, mid = i % 4 === 0; track.push(L(i * 1.5, 115, big ? 107 : mid ? 110 : 112.5, `stroke="#2a2a2a" stroke-width="${big ? 1.2 : mid ? 0.8 : 0.4}" opacity="${mid ? 0.85 : 0.5}"`)); }
+    for (let i = 0; i < 240; i++) { const big = i % 20 === 0, mid = i % 4 === 0; track.push(L(i * 1.5, 115, big ? 107 : mid ? 110 : 112.5, `stroke="#c9a54e" stroke-width="${big ? 1.1 : mid ? 0.7 : 0.35}" opacity="${mid ? 0.85 : 0.5}"`)); }
     const trackNums = Array.from({ length: 12 }, (_, i) => { const n = (i + 1) * 5, [x, y] = P(n * 6, 101); return n === 15 ? "" : `<text x="${x.toFixed(1)}" y="${(y + 2).toFixed(1)}" text-anchor="middle" font-size="5.4" fill="#3a3a3a" font-family="${F}">${n}</text>`; }).join("");
     for (let h = 0; h < 12; h++) {
       if (h === 3) continue; // day-date
@@ -164,44 +164,44 @@
     const sub = (x, y, id, labels, marks) => {
       const t = [];
       for (let i = 0; i < marks; i++) { const rad = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
-        t.push(`<line x1="${(x + (R - 2) * Math.sin(rad)).toFixed(2)}" y1="${(y - (R - 2) * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? R - 8 : R - 5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? R - 8 : R - 5) * Math.cos(rad)).toFixed(2)}" stroke="#e8e8e8" stroke-width="${big ? 1.1 : 0.5}"/>`); }
-      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 15) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 15) * Math.cos(a) + 2.6).toFixed(1)}" text-anchor="middle" font-size="7" font-weight="600" fill="#f0f0f0" font-family="${F}">${l}</text>`; }).join("");
+        t.push(`<line x1="${(x + (R - 2) * Math.sin(rad)).toFixed(2)}" y1="${(y - (R - 2) * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? R - 8 : R - 5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? R - 8 : R - 5) * Math.cos(rad)).toFixed(2)}" stroke="#d9bd6a" stroke-width="${big ? 1.1 : 0.5}"/>`); }
+      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 15) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 15) * Math.cos(a) + 2.6).toFixed(1)}" text-anchor="middle" font-size="7" font-weight="600" fill="#e9d38a" font-family="${F}">${l}</text>`; }).join("");
       return `<circle cx="${x}" cy="${y}" r="${R + 1.8}" fill="url(#gSteel)"/><circle cx="${x}" cy="${y}" r="${R}" fill="url(#gSub)"/>
         ${Array.from({ length: 28 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${R - 1 - i * 1.1}" fill="none" stroke="#fff" stroke-width=".25" opacity=".07"/>`).join("")}${t.join("")}${lab}
-        <g id="${id}"><line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y - (R - 4)}" stroke="#fafafa" stroke-width="1.8" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="3" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
+        <g id="${id}"><line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y - (R - 4)}" stroke="#f6dd8c" stroke-width="1.8" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="3" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
     };
     return `<svg viewBox="0 0 300 300" aria-label="Watch" id="watchSvg" style="cursor:pointer">
       <defs>
-        <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#9a9a9a"/><stop offset=".55" stop-color="#f4f4f4"/><stop offset=".8" stop-color="#8a8a8a"/><stop offset="1" stop-color="#e0e0e0"/></linearGradient>
-        <radialGradient id="gDial" cx=".5" cy=".42" r=".7"><stop offset="0" stop-color="#f7f7f7"/><stop offset=".6" stop-color="#d9d9d9"/><stop offset="1" stop-color="#a9a9a9"/></radialGradient>
-        <radialGradient id="gSub" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#3a3a3a"/><stop offset="1" stop-color="#0e0e0e"/></radialGradient>
+        <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe7a1"/><stop offset=".28" stop-color="#b8862b"/><stop offset=".55" stop-color="#fff3c4"/><stop offset=".8" stop-color="#9c7018"/><stop offset="1" stop-color="#e9c766"/></linearGradient>
+        <radialGradient id="gDial" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#262421"/><stop offset=".6" stop-color="#0e0d0b"/><stop offset="1" stop-color="#030303"/></radialGradient>
+        <radialGradient id="gSub" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#1d1b17"/><stop offset="1" stop-color="#050505"/></radialGradient>
         <radialGradient id="gBez" cx=".5" cy=".5" r=".5"><stop offset=".85" stop-color="#1c1c1c"/><stop offset="1" stop-color="#050505"/></radialGradient>
-        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
         <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2.2" stdDeviation="1.6" flood-opacity=".55"/></filter>
         <path id="tachArc" d="M ${P(6.5, 128)[0]} ${P(6.5, 128)[1]} A 128 128 0 0 1 ${P(38, 128)[0]} ${P(38, 128)[1]}"/>
       </defs>
       <circle cx="${c}" cy="${c}" r="149" fill="url(#gSteel)"/>
       <circle cx="${c}" cy="${c}" r="145" fill="url(#gBez)"/>
       ${bezTicks}${bez}
-      <text font-size="6.4" font-weight="700" letter-spacing="1.1" fill="#f2f2f2" font-family="${F}"><textPath href="#tachArc">BLUMENFELD</textPath></text>
+      <text font-size="6.4" font-weight="700" letter-spacing="1.6" fill="#f6dd8c" font-family="${F}"><textPath href="#tachArc">BLUMENFELD</textPath></text>
       <circle cx="${c}" cy="${c}" r="121" fill="url(#gSteel)"/>
       <circle cx="${c}" cy="${c}" r="118" fill="url(#gDial)"/>
-      <circle cx="${c}" cy="${c}" r="72" fill="#fff" opacity=".35"/>
-      <g opacity=".08">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 118, 'stroke="#000" stroke-width=".4"')).join("")}</g>
+      <circle cx="${c}" cy="${c}" r="72" fill="none" stroke="#d4af37" stroke-width=".5" opacity=".35"/>
+      <g opacity=".08">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 118, 'stroke="#fff" stroke-width=".35"')).join("")}</g>
       ${track.join("")}${idx.join("")}
       ${sub(c, c - 53, "subM", ["30", "5", "10", "15", "20", "25"], 30)}
       ${sub(c - 53, c, "subS", ["60", "15", "30", "45"], 60)}
       ${sub(c, c + 53, "subH", ["12", "2", "4", "6", "8", "10"], 24)}
-      <text x="${c + 34}" y="${c - 16}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="1" fill="#1a1a1a" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
-      <text x="${c + 34}" y="${c - 9.5}" text-anchor="middle" font-size="3.4" letter-spacing="1" fill="#444" font-family="${F}">CHRONOGRAPH</text>
+      <text x="${c + 34}" y="${c - 16}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="2" fill="url(#gSteel)" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
+      <text x="${c + 34}" y="${c - 9.5}" text-anchor="middle" font-size="3.4" letter-spacing="1.2" fill="#bfa45a" font-family="${F}">CHRONOGRAPH</text>
       <g filter="url(#sh)"><rect x="${c + 50}" y="${c - 8}" width="40" height="16" rx="1.5" fill="url(#gSteel)"/>
         <rect x="${c + 52}" y="${c - 6.4}" width="21" height="12.8" fill="#fff"/><rect x="${c + 74.5}" y="${c - 6.4}" width="13.5" height="12.8" fill="#fff"/>
         <text id="wDay" x="${c + 62.5}" y="${c + 3.6}" text-anchor="middle" font-size="9" font-weight="700" fill="#111" font-family="${F}">MON</text>
         <text id="wDate" x="${c + 81.2}" y="${c + 3.6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111" font-family="${F}">1</text></g>
-      <g id="hh" filter="url(#sh)"><path d="M${c - 4.4} ${c + 12} L${c - 3.6} ${c - 50} L${c} ${c - 60} L${c + 3.6} ${c - 50} L${c + 4.4} ${c + 12} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 50}" width="2.6" height="36" rx="1" fill="#fff"/></g>
+      <g id="hh" filter="url(#sh)"><path d="M${c - 4.4} ${c + 12} L${c - 3.6} ${c - 50} L${c} ${c - 60} L${c + 3.6} ${c - 50} L${c + 4.4} ${c + 12} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 50}" width="2.6" height="36" rx="1" fill="#f4f1e6"/></g>
       <g id="mm" filter="url(#sh)"><path d="M${c - 3.6} ${c + 16} L${c - 2.8} ${c - 86} L${c} ${c - 98} L${c + 2.8} ${c - 86} L${c + 3.6} ${c + 16} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.1}" y="${c - 88}" width="2.2" height="64" rx=".8" fill="#fff"/></g>
-      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#f5f5f5" stroke-width="1.3" stroke-linecap="round"/><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#777" stroke-width=".35"/><circle cx="${c}" cy="${c + 20}" r="3.8" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>
-      <circle cx="${c}" cy="${c}" r="5.2" fill="url(#gSteel)" stroke="#555" stroke-width=".7"/><circle cx="${c}" cy="${c}" r="1.6" fill="#333"/>
+      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#f6dd8c" stroke-width="1.2" stroke-linecap="round"/><circle cx="${c}" cy="${c + 20}" r="3.8" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>
+      <circle cx="${c}" cy="${c}" r="5.2" fill="url(#gSteel)" stroke="#555" stroke-width=".7"/><circle cx="${c}" cy="${c}" r="1.6" fill="#1a1306"/>
       <ellipse cx="${c - 20}" cy="${c - 62}" rx="96" ry="58" fill="url(#gGlass)" transform="rotate(-18 ${c} ${c})"/>
     </svg>`;
   }
@@ -239,30 +239,61 @@
 
   // ---------- Home ----------
   function pHome() {
-    const open = D.todo.filter((t) => !t.done), dueToday = open.filter((t) => t.due && t.due <= todayKey()).length;
+    const today = todayKey();
+    const open = D.todo.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+    const late = open.filter((t) => t.due && t.due <= today).length;
     const wishes = D.wish.filter((w) => !w.got);
     const active = D.pkgs.filter((p) => !p.delivered && !p.archived), ofd = active.filter((p) => p.statusCode === 4).length;
     const trimIn = trim?.ready && Array.isArray(trim.incoming) ? trim.incoming.length : 0;
     const n = (v, fmt) => `<span data-count="${+v || 0}"${fmt ? ` data-fmt="${fmt}"` : ""}>${fmt === "usd" ? usd(v, false) : v}</span>`;
-    const moneyTile = money?.ready
-      ? `<div class="row2"><div><div class="big money">${n(money.cash ?? 0, "usd")}</div><div class="sm">Cash across accounts</div></div>
-         <div style="text-align:right"><div class="big money" style="font-size:18px;color:var(--gold2)">${n(money.credit ?? 0, "usd")}</div><div class="sm">Credit owed</div></div></div>`
-      : `<div class="sm">${esc(money?.why || "Loading…")}</div>`;
-    const max = trim?.ready ? Math.max(1, ...trim.week.map((d) => d.sales)) : 1;
-    const trimTile = trim?.ready
-      ? `<div class="row2"><div><div class="big money">${n(trim.daily.sales, "usd")}</div><div class="sm">Today · ${usd(trim.wtd.sales, false)} wk</div></div>
-         <div class="spark">${trim.week.map((d, i) => `<i style="height:${Math.max(6, Math.round((d.sales / max) * 100))}%;animation-delay:${0.3 + i * 0.06}s;${d.day > trim.today ? "opacity:.25" : ""}"></i>`).join("")}</div></div>`
-      : `<div class="sm">${esc(trim?.why || "Loading…")}</div>`;
-    const tile = (href, ic, name, body, i, cls = "") => `<a class="tile ${cls}" href="#${href}" style="--i:${i}"><div class="row"><div class="ic">${svg(ic)}</div><div class="nm" style="margin:0">${name}</div></div>${body}</a>`;
-    return `<div class="watch">${watchSVG()}</div>
-    <div class="grid${lastRoute === null || true ? " enterTiles" : ""}">
-      ${tile("money", "wallet", "Money", moneyTile, 0, "wide")}
-      ${tile("trim", "chart", "Trim Sales", trimTile, 1, "wide")}
-      ${tile("todo", "check", "To-Do", `<div><div class="big">${n(open.length)}</div><div class="sm">${dueToday ? dueToday + " due or late" : "open"}</div></div>`, 2)}
-      ${tile("pkgs", "box", "Incoming", `<div><div class="big">${n(active.length + trimIn)}</div><div class="sm">${ofd ? ofd + " out for delivery" : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`}</div></div>`, 3)}
-      ${tile("wish", "gift", "Wish List", `<div><div class="big">${n(wishes.length)}</div><div class="sm">${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} total</div></div>`, 4)}
-      ${tile("photos", "photo", "Photos", `<div><div class="big" style="font-size:16px;color:var(--mute)">Soon</div><div class="sm">OneDrive folders</div></div>`, 5)}
-    </div>`;
+
+    // Portfolio
+    const accts = money?.accounts || [];
+    const portfolio = money?.ready
+      ? `<div class="lbl">Liquid cash</div><div class="hero-num">${n(money.cash ?? 0, "usd")}</div>
+         <div class="cols"><div><div class="lbl">Credit owed</div><div class="v">${usd(money.credit ?? 0, false)}</div></div>
+         <div><div class="lbl">Accounts</div><div class="v">${accts.length}</div></div>
+         <div><div class="lbl">Synced</div><div class="v">${money.lastSync ? ago(Date.parse(money.lastSync)) : "—"}</div></div></div>`
+      : `<div class="lbl">Liquid cash</div><div class="quiet">${esc(money?.why || "Loading…")}</div>`;
+
+    // Trim: elegant gold line over the week
+    let trimBody = `<div class="quiet">${esc(trim?.why || "Loading…")}</div>`;
+    if (trim?.ready) {
+      const wk = trim.week.filter((d) => d.day <= trim.today), max = Math.max(1, ...trim.week.map((d) => d.sales));
+      const W = 300, H = 64, pts = wk.map((d, i) => [(i / 6) * W, H - 6 - (d.sales / max) * (H - 14)]);
+      const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+      const area = pts.length ? `${line} L${pts[pts.length - 1][0].toFixed(1)} ${H} L0 ${H} Z` : "";
+      const last = pts[pts.length - 1] || [0, H];
+      const diff = trim.wtd.sales - trim.lastWeekToDate.sales;
+      trimBody = `<div class="row" style="align-items:flex-end"><div class="grow"><div class="lbl">Today</div><div class="hero-num">${n(trim.daily.sales, "usd")}</div></div>
+        <div class="delta ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${usd(Math.abs(diff), false)}<small>vs last week</small></div></div>
+        <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4af37" stop-opacity=".35"/><stop offset="1" stop-color="#d4af37" stop-opacity="0"/></linearGradient></defs>
+          <path d="${area}" fill="url(#ga)" class="area"/><path d="${line}" fill="none" stroke="#f0d27a" stroke-width="1.6" class="draw" vector-effect="non-scaling-stroke"/>
+          <circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="#f6dd8c" class="dot"/></svg>
+        <div class="days">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<span class="${trim.week[i]?.day === trim.today ? "on" : ""}">${d}</span>`).join("")}</div>
+        <div class="cols"><div><div class="lbl">Week</div><div class="v">${usd(trim.wtd.sales, false)}</div></div>
+        <div><div class="lbl">Month</div><div class="v">${usd(trim.mtd.sales, false)}</div></div>
+        <div><div class="lbl">Year</div><div class="v">${usd(trim.ytd.sales, false)}</div></div></div>`;
+    }
+
+    const row = (href, ic, title, sub, val, i) => `<a class="arow" href="#${href}" style="--i:${i}"><span class="aic">${svg(ic)}</span>
+      <span class="grow"><span class="at">${title}</span><span class="as">${sub}</span></span><span class="av">${val}</span><span class="chev">›</span></a>`;
+    const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
+    const nextPkg = ofd ? `${ofd} out for delivery` : active[0]?.status ? `${esc(active[0].label || "Package")} · ${esc(active[0].status)}` : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`;
+
+    return `<section class="hero">
+        <div class="spot"></div>
+        <div class="watch">${watchSVG()}</div>
+        <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
+      </section>
+      <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
+      <a class="lux" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
+      <div class="lux agenda" style="--i:2"><div class="lux-h"><span>Agenda</span></div>
+        ${row("todo", "check", "To-Do", nextTodo, `${open.length}${late ? `<em>${late} due</em>` : ""}`, 0)}
+        ${row("pkgs", "box", "Incoming", nextPkg, active.length + trimIn, 1)}
+        ${row("wish", "gift", "Wish List", wishes.length ? `${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} across ${wishes.length} item${wishes.length === 1 ? "" : "s"}` : "Empty", wishes.length, 2)}
+        ${row("photos", "photo", "Photo Vault", "OneDrive · coming soon", "", 3)}
+      </div>`;
   }
 
   // ---------- To-Do ----------

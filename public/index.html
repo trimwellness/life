@@ -117,6 +117,51 @@ a.btn{text-decoration:none;display:inline-block}
 .watch{display:flex;justify-content:center;align-items:center;margin:18px 0 24px;min-height:clamp(220px,30vh,290px);animation:up .7s cubic-bezier(.2,.8,.2,1) both}
 .watch svg{width:min(54vw,215px);height:auto;filter:drop-shadow(0 18px 30px rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(212,175,55,.12))}
 .wdate{text-align:center;color:var(--gold);font-size:12px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:10px}
+/* ---- Home: executive ---- */
+.hero{position:relative;display:flex;flex-direction:column;align-items:center;padding:22px 0 8px;margin:0 -16px 6px}
+.hero .spot{position:absolute;left:50%;top:6px;width:min(92vw,420px);height:min(92vw,420px);transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(circle,rgba(212,175,55,.16) 0%,rgba(212,175,55,.05) 38%,transparent 66%);pointer-events:none;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.6;transform:translateX(-50%) scale(.96)}}
+.hero .watch{margin:0;min-height:0}
+.hero .watch svg{width:min(56vw,224px)}
+.crest{display:flex;align-items:center;gap:12px;margin-top:16px;color:var(--gold);font:500 11px/1 "Didot","Bodoni 72",Georgia,serif;letter-spacing:.55em;text-transform:uppercase;padding-left:.55em;animation:up .8s .2s both}
+.crest i{display:block;width:44px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.crest i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+.lux{display:block;text-decoration:none;color:inherit;margin:14px 0;padding:18px 18px 16px;border-radius:22px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,rgba(28,25,19,.94),rgba(9,9,8,.96)) padding-box,linear-gradient(160deg,rgba(246,221,140,.6),rgba(168,122,30,.08) 35%,rgba(168,122,30,.08) 70%,rgba(246,221,140,.35)) border-box;
+  border:1px solid transparent;box-shadow:0 24px 50px -18px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,236,190,.08);
+  animation:up .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*90ms + .25s);transition:transform .2s}
+a.lux:active{transform:scale(.985)}
+.lux::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(246,221,140,.07) 48%,transparent 60%);transform:translateX(-120%);animation:sweep 7s ease-in-out infinite;animation-delay:calc(var(--i,0)*1.3s + 2s);pointer-events:none}
+@keyframes sweep{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.lux-h{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:12px}
+.lux-h .chev,.arow .chev{color:var(--gold);font-size:20px;letter-spacing:0;opacity:.7}
+.lbl{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#8d8471}
+.hero-num{font:400 40px/1.05 "Didot","Bodoni 72","Playfair Display",Georgia,serif;color:#fbf3dc;letter-spacing:-.5px;margin:4px 0 2px;font-variant-numeric:lining-nums tabular-nums}
+.quiet{color:var(--mute);font-size:14px;margin-top:6px}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px;padding-top:12px;border-top:1px solid rgba(212,175,55,.16)}
+.cols>div{padding-right:8px}.cols>div+div{padding-left:12px;border-left:1px solid rgba(212,175,55,.12)}
+.cols .v{font-size:15px;color:#efe6cf;margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.delta{font-size:13px;font-weight:600;text-align:right}.delta small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8d8471;font-weight:500}
+.delta.up{color:#8fd9a4}.delta.down{color:#ff9585}
+.chart{width:100%;height:64px;margin-top:12px;display:block;overflow:visible}
+.chart .draw{stroke-dasharray:900;stroke-dashoffset:900;animation:drawl 1.6s .5s cubic-bezier(.4,0,.2,1) forwards;filter:drop-shadow(0 0 4px rgba(240,210,122,.6))}
+.chart .area{opacity:0;animation:fade 1s 1.2s reverse both}
+.chart .dot{opacity:0;animation:pulse 2.4s 1.8s ease-in-out infinite}
+@keyframes drawl{to{stroke-dashoffset:0}}
+@keyframes pulse{0%{opacity:1;r:3.2}50%{opacity:.5;r:5}100%{opacity:1;r:3.2}}
+.days{display:flex;justify-content:space-between;font-size:10px;color:#6f685a;margin-top:4px;letter-spacing:.1em}
+.days span{width:12px;text-align:center}.days .on{color:var(--gold2);font-weight:700}
+.agenda{padding-bottom:6px}
+.arow{display:flex;align-items:center;gap:14px;padding:13px 0;text-decoration:none;color:inherit;border-top:1px solid rgba(212,175,55,.12);animation:up .5s both;animation-delay:calc(var(--i,0)*70ms + .5s);transition:background .2s}
+.arow:active{background:rgba(212,175,55,.05)}
+.aic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;border:1px solid rgba(212,175,55,.45);background:radial-gradient(circle at 30% 25%,rgba(246,221,140,.16),rgba(0,0,0,.2))}
+.aic svg{width:17px;height:17px;stroke:var(--gold2)}
+.arow .grow{flex:1;min-width:0;display:flex;flex-direction:column}
+.at{font-size:16px;color:#f6efdc;font-weight:500}
+.as{font-size:12.5px;color:#8d8471;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.av{font:400 22px/1 "Didot","Bodoni 72",Georgia,serif;color:var(--gold2);text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.av em{font:600 9.5px/1 -apple-system,sans-serif;font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:#ff9585}
 /* Bottom tabs */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,rgba(10,10,10,.75),rgba(4,4,4,.96));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-top:1px solid rgba(212,175,55,.3)}
 nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);position:relative}
@@ -132,6 +177,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=9"></script>
+<script src="/app.js?v=10"></script>
 </body>
 </html>
