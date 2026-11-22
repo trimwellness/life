@@ -142,58 +142,91 @@
     requestAnimationFrame(step);
   }
 
-  // ---------- Watch: real time and date (Eastern), sweeping seconds at 8 beats a second ----------
+  // ---------- Watch: original green-dial chronograph. Real Eastern time and date; small seconds at 9 sweep at
+  // 8 beats a second; tap the watch to start/stop the chronograph, double-tap to reset (30-min counter at 3, 12-hour at 6).
   function watchSVG() {
-    const c = 150, ticks = [], idx = [];
-    for (let i = 0; i < 60; i++) {
-      const a = (i * 6 * Math.PI) / 180, big = i % 5 === 0, r1 = 118, r2 = big ? 108 : 113;
-      if (!big) ticks.push(`<line x1="${c + r1 * Math.sin(a)}" y1="${c - r1 * Math.cos(a)}" x2="${c + r2 * Math.sin(a)}" y2="${c - r2 * Math.cos(a)}" stroke="#bfa45a" stroke-width="1" opacity=".7"/>`);
+    const c = 150, P = (a, r) => [c + r * Math.sin((a * Math.PI) / 180), c - r * Math.cos((a * Math.PI) / 180)];
+    const L = (a, r1, r2, st) => { const [x1, y1] = P(a, r1), [x2, y2] = P(a, r2); return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${st}/>`; };
+    const track = [], nums = [], idx = [];
+    for (let i = 0; i < 300; i++) { // fifth-of-a-second chrono scale on the outer track
+      const a = i * 1.2, big = i % 25 === 0, mid = i % 5 === 0;
+      track.push(L(a, 121, big ? 110 : mid ? 114 : 117.5, `stroke="#e9d38a" stroke-width="${big ? 1.4 : mid ? 1 : 0.5}" opacity="${mid ? 0.9 : 0.55}"`));
     }
+    for (let n = 5; n <= 60; n += 5) { const [x, y] = P(n * 6, 128.5); nums.push(`<text x="${x.toFixed(1)}" y="${(y + 2.6).toFixed(1)}" text-anchor="middle" font-size="7.2" font-weight="600" fill="#2a1d05" font-family="-apple-system,Helvetica,sans-serif">${n}</text>`); }
     for (let h = 0; h < 12; h++) {
-      if (h === 3) continue; // date window
-      const deg = h * 30, w = h === 0 ? 9 : 6.5, len = h === 0 ? 24 : 20;
-      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 112}" width="${w}" height="${len}" rx="1.4" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/>${h === 0 ? `<rect x="${c - 1.3}" y="${c - 110}" width="2.6" height="${len - 4}" fill="#0a0a0a" opacity=".55"/>` : `<rect x="${c - 1.6}" y="${c - 109}" width="3.2" height="${len - 6}" rx="1" fill="#eef3e2" opacity=".9"/>`}</g>`);
+      if (h === 4) continue; // date window
+      const deg = h * 30, w = h === 0 ? 8 : 5.5, len = h === 0 ? 20 : 15;
+      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 107}" width="${w}" height="${len}" rx="1.2" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 105}" width="2.6" height="${len - 4}" rx=".8" fill="#f2f6e6" opacity=".92"/></g>`);
     }
-    return `<svg viewBox="0 0 300 300" aria-label="Watch">
+    const sub = (x, y, id, labels, marks) => {
+      const t = [];
+      for (let i = 0; i < marks; i++) { const a = (i * 360) / marks, rad = (a * Math.PI) / 180, big = labels.length && i % (marks / labels.length) === 0;
+        t.push(`<line x1="${x + 22 * Math.sin(rad)}" y1="${y - 22 * Math.cos(rad)}" x2="${x + (big ? 17.5 : 19.5) * Math.sin(rad)}" y2="${y - (big ? 17.5 : 19.5) * Math.cos(rad)}" stroke="#e9d38a" stroke-width="${big ? 1 : 0.5}"/>`); }
+      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${x + 12.5 * Math.sin(a)}" y="${y - 12.5 * Math.cos(a) + 2.2}" text-anchor="middle" font-size="5.6" fill="#e9d38a" font-family="-apple-system,Helvetica,sans-serif">${l}</text>`; }).join("");
+      return `<circle cx="${x}" cy="${y}" r="25" fill="url(#gSub)" stroke="url(#gIdx)" stroke-width="1.6"/>${Array.from({ length: 40 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${24 - i * 0.6}" fill="none" stroke="#000" stroke-width=".25" opacity=".18"/>`).join("")}${t.join("")}${lab}
+        <g id="${id}"><line x1="${x}" y1="${y + 5}" x2="${x}" y2="${y - 20}" stroke="url(#gIdx)" stroke-width="1.6" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.4" fill="url(#gIdx)"/></g>`;
+    };
+    const [dx, dy] = P(120, 89);
+    return `<svg viewBox="0 0 300 300" aria-label="Watch" id="watchSvg" style="cursor:pointer">
       <defs>
         <linearGradient id="gCase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe7a1"/><stop offset=".25" stop-color="#c9982c"/><stop offset=".5" stop-color="#fff3c4"/><stop offset=".75" stop-color="#a87a1e"/><stop offset="1" stop-color="#e9c766"/></linearGradient>
         <linearGradient id="gIdx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a87a1e"/><stop offset=".5" stop-color="#fff0b8"/><stop offset="1" stop-color="#b8862b"/></linearGradient>
-        <radialGradient id="gDial" cx=".5" cy=".42" r=".65"><stop offset="0" stop-color="#2a2a2a"/><stop offset=".55" stop-color="#0d0d0d"/><stop offset="1" stop-color="#000"/></radialGradient>
-        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
-        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-opacity=".75"/></filter>
+        <radialGradient id="gDial" cx=".5" cy=".38" r=".7"><stop offset="0" stop-color="#2f8a3c"/><stop offset=".55" stop-color="#145a22"/><stop offset="1" stop-color="#06260d"/></radialGradient>
+        <radialGradient id="gSub" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#1c6a2b"/><stop offset="1" stop-color="#0a3814"/></radialGradient>
+        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2.6" stdDeviation="2" flood-opacity=".7"/></filter>
       </defs>
-      <circle cx="${c}" cy="${c}" r="147" fill="url(#gCase)"/>
-      <circle cx="${c}" cy="${c}" r="139" fill="none" stroke="#5b420f" stroke-width="1.2" opacity=".6"/>
+      <rect x="${c + 133}" y="${c - 74}" width="9" height="16" rx="2.5" fill="url(#gCase)" transform="rotate(45 ${c + 137} ${c - 66})" id="pushA"/>
+      <rect x="${c + 133}" y="${c + 58}" width="9" height="16" rx="2.5" fill="url(#gCase)" transform="rotate(-45 ${c + 137} ${c + 66})"/>
+      <rect x="${c + 140}" y="${c - 9}" width="9" height="18" rx="2.5" fill="url(#gCase)"/>
+      <circle cx="${c}" cy="${c}" r="146" fill="url(#gCase)"/>
       <circle cx="${c}" cy="${c}" r="136" fill="url(#gCase)" transform="rotate(180 ${c} ${c})"/>
-      <circle cx="${c}" cy="${c}" r="124" fill="url(#gDial)" stroke="#2b2111" stroke-width="2"/>
-      <g opacity=".08">${Array.from({ length: 72 }, (_, i) => `<line x1="${c}" y1="${c}" x2="${c + 124 * Math.sin((i * 5 * Math.PI) / 180)}" y2="${c - 124 * Math.cos((i * 5 * Math.PI) / 180)}" stroke="#fff" stroke-width=".6"/>`).join("")}</g>
-      ${ticks.join("")}${idx.join("")}
-      <text x="${c}" y="${c - 58}" text-anchor="middle" font-family="Didot,'Bodoni 72',Georgia,serif" font-size="19" letter-spacing="5" fill="url(#gIdx)">LIFE</text>
-      <text x="${c}" y="${c - 44}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="6.2" letter-spacing="2.4" fill="#bfa45a">BLUMENFELD</text>
-      <text x="${c}" y="${c + 56}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="6.4" letter-spacing="2.6" fill="#bfa45a">AUTOMATIC</text>
-      <text x="${c}" y="${c + 66}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.2" letter-spacing="2" fill="#8b7a4f">EST. 2026</text>
-      <g filter="url(#sh)"><rect x="${c + 78}" y="${c - 11}" width="30" height="22" rx="2.5" fill="#f6f1e4" stroke="url(#gIdx)" stroke-width="2.4"/>
-      <text id="wDate" x="${c + 93}" y="${c + 6.8}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-weight="700" font-size="17" fill="#111">1</text></g>
-      <g id="hh" filter="url(#sh)"><path d="M${c - 5} ${c + 14} L${c - 4.2} ${c - 52} L${c} ${c - 66} L${c + 4.2} ${c - 52} L${c + 5} ${c + 14} Z" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/><rect x="${c - 1.5}" y="${c - 54}" width="3" height="40" rx="1.2" fill="#eef3e2" opacity=".9"/></g>
-      <g id="mm" filter="url(#sh)"><path d="M${c - 4} ${c + 18} L${c - 3.2} ${c - 92} L${c} ${c - 104} L${c + 3.2} ${c - 92} L${c + 4} ${c + 18} Z" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/><rect x="${c - 1.3}" y="${c - 94}" width="2.6" height="70" rx="1" fill="#eef3e2" opacity=".9"/></g>
-      <g id="ss" filter="url(#sh)"><line x1="${c}" y1="${c + 30}" x2="${c}" y2="${c - 112}" stroke="#e8c45e" stroke-width="1.5" stroke-linecap="round"/><circle cx="${c}" cy="${c - 80}" r="4" fill="#0b0b0b" stroke="#e8c45e" stroke-width="1.5"/><circle cx="${c}" cy="${c + 24}" r="4.5" fill="#e8c45e"/></g>
-      <circle cx="${c}" cy="${c}" r="6" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".8"/><circle cx="${c}" cy="${c}" r="2" fill="#2b2111"/>
+      <circle cx="${c}" cy="${c}" r="133.5" fill="none" stroke="#6b4e12" stroke-width=".8"/>
+      ${nums.join("")}
+      <circle cx="${c}" cy="${c}" r="122" fill="url(#gDial)" stroke="#2b2111" stroke-width="1.6"/>
+      <g opacity=".1">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 122, 'stroke="#fff" stroke-width=".5"')).join("")}</g>
+      ${track.join("")}${idx.join("")}
+      <text x="${c}" y="${c - 66}" text-anchor="middle" font-family="Didot,'Bodoni 72',Georgia,serif" font-size="17" letter-spacing="5" fill="url(#gIdx)">LIFE</text>
+      <text x="${c}" y="${c - 54}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.6" letter-spacing="2.4" fill="#e9d38a">BLUMENFELD</text>
+      <text x="${c}" y="${c - 30}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.4" letter-spacing="2.2" fill="#e9d38a">CHRONOGRAPH</text>
+      <text x="${c}" y="${c + 92}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="4.6" letter-spacing="1.8" fill="#bfa45a">AUTOMATIC · EST. 2026</text>
+      ${sub(c - 55, c, "subS", ["60", "20", "40"], 60)}
+      ${sub(c + 55, c, "subM", ["30", "10", "20"], 30)}
+      ${sub(c, c + 55, "subH", ["12", "3", "6", "9"], 24)}
+      <g filter="url(#sh)" transform="rotate(30 ${dx} ${dy})"><rect x="${dx - 11}" y="${dy - 8}" width="22" height="16" rx="2" fill="#f6f1e4" stroke="url(#gIdx)" stroke-width="2"/>
+      <text id="wDate" x="${dx}" y="${dy + 4.6}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-weight="700" font-size="12" fill="#111">1</text></g>
+      <g id="hh" filter="url(#sh)"><path d="M${c - 4.6} ${c + 12} L${c - 4} ${c - 50} L${c} ${c - 62} L${c + 4} ${c - 50} L${c + 4.6} ${c + 12} Z" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.4}" y="${c - 52}" width="2.8" height="38" rx="1" fill="#f2f6e6" opacity=".92"/></g>
+      <g id="mm" filter="url(#sh)"><path d="M${c - 3.8} ${c + 16} L${c - 3} ${c - 90} L${c} ${c - 102} L${c + 3} ${c - 90} L${c + 3.8} ${c + 16} Z" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.2}" y="${c - 92}" width="2.4" height="68" rx=".9" fill="#f2f6e6" opacity=".92"/></g>
+      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 28}" x2="${c}" y2="${c - 118}" stroke="#ff6a3d" stroke-width="1.3" stroke-linecap="round"/><path d="M${c - 2.6} ${c - 104} L${c} ${c - 118} L${c + 2.6} ${c - 104} Z" fill="#ff6a3d"/><circle cx="${c}" cy="${c + 22}" r="4" fill="#ff6a3d"/></g>
+      <circle cx="${c}" cy="${c}" r="5.5" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".8"/><circle cx="${c}" cy="${c}" r="1.8" fill="#ff6a3d"/>
       <ellipse cx="${c - 20}" cy="${c - 62}" rx="96" ry="58" fill="url(#gGlass)" transform="rotate(-18 ${c} ${c})"/>
     </svg>`;
   }
-  // Eastern time parts, then hands. Seconds advance in 1/8-second beats like a mechanical movement.
+  // Chronograph: tap to start/stop, double-tap to reset. Kept for the session.
+  const chrono = { run: false, start: 0, acc: 0 };
+  const chronoMs = () => chrono.acc + (chrono.run ? performance.now() - chrono.start : 0);
+  let lastTap = 0;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#watchSvg")) return;
+    const now = performance.now();
+    if (now - lastTap < 320) { chrono.run = false; chrono.acc = 0; lastTap = 0; if (navigator.vibrate) navigator.vibrate(20); return; }
+    lastTap = now;
+    if (chrono.run) { chrono.acc += now - chrono.start; chrono.run = false; } else { chrono.start = now; chrono.run = true; }
+    if (navigator.vibrate) navigator.vibrate(10);
+  });
   const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric" });
+  const rot = (id, deg, x = 150, y = 150) => { const el = document.getElementById(id); if (el) el.setAttribute("transform", `rotate(${deg.toFixed(3)} ${x} ${y})`); };
   function tickWatch() {
-    const hh = document.getElementById("hh");
-    if (hh) {
+    if (document.getElementById("hh")) {
       const now = new Date(), p = Object.fromEntries(NY.formatToParts(now).map((x) => [x.type, x.value]));
-      const ms = Math.floor(now.getMilliseconds() / 125) * 125;
-      const s = +p.second + ms / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
-      hh.setAttribute("transform", `rotate(${h * 30} 150 150)`);
-      document.getElementById("mm").setAttribute("transform", `rotate(${m * 6} 150 150)`);
-      document.getElementById("ss").setAttribute("transform", `rotate(${s * 6} 150 150)`);
+      const beat = Math.floor(now.getMilliseconds() / 125) * 125;
+      const s = +p.second + beat / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
+      rot("hh", h * 30); rot("mm", m * 6);
+      rot("subS", s * 6, 95, 150);
+      const cm = Math.floor(chronoMs() / 125) * 125 / 1000; // chrono seconds, in 1/8 beats
+      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 205, 150); rot("subH", ((cm / 3600) % 12) * 30, 150, 205);
       const d = document.getElementById("wDate");
-      if (d.textContent !== p.day) d.textContent = p.day;
+      if (d && d.textContent !== p.day) d.textContent = p.day;
     }
     requestAnimationFrame(tickWatch);
   }
