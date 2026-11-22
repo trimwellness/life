@@ -1,4 +1,4 @@
-// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #trim, #pkgs (Incoming), #money, #photos).
+// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #trim, #pkgs (Incoming), #money, #photos, #guns).
 (() => {
   const $app = document.getElementById("app");
   const store = {
@@ -62,7 +62,7 @@
     if (!token) return renderLogin();
     try { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
-    loadTrim(); loadMoney();
+    loadTrim(); loadMoney(); loadGV(); loadAlbums();
   }
   async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "trim", "pkgs"].includes(route())) render(); }
   async function loadMoney() { try { money = await api("money"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } if (["", "money"].includes(route())) render(); }
@@ -92,12 +92,13 @@
     check: '<path d="M8.5 12.5l2.5 2.5 5-6"/><rect x="3.5" y="3.5" width="17" height="17" rx="4"/>',
     box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
     gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
+    shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
   };
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
   const top = (title, right = "") => {
     const isTab = TABS.some(([r]) => r === route());
-    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories" }[title] || "Life";
+    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger" }[title] || "Life";
     return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1 data-eyebrow="${eyebrow}">${title}</h1>`;
   };
 
@@ -122,7 +123,7 @@
   let lastRoute = null;
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
     $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
@@ -298,8 +299,11 @@
         ${box("todo", "check", "To-Do", open.length, late ? `<em>${late} due</em>${esc(open[0]?.text || "")}` : nextTodo, 2)}
         ${box("pkgs", "box", "Incoming", active.length + trimIn, nextPkg, 3)}
         ${box("wish", "gift", "Wish List", wishes.length, wishes.length ? usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false) + " total" : "Empty", 4)}
-        ${box("photos", "photo", "Photo Vault", "", "OneDrive folders", 5)}
-      </div>`;
+        ${box("photos", "photo", "Photo Vault", PV.albums ? PV.total || 0 : 0, PV.albums ? `${PV.albums.length} album${PV.albums.length === 1 ? "" : "s"}` : "Your albums", 5)}
+      </div>
+      ${(() => { const t = gvTotals(); if (!t) return ""; return `<a class="lux" href="#guns" style="--i:6"><div class="lux-h"><span>Gun Vault</span><span class="chev">›</span></div>
+        <div class="lbl">Collection value</div><div class="hero-num">${n(Math.round(t.all), "usd")}</div>
+        <div class="cols"><div><div class="lbl">Firearms</div><div class="v">${GV.data.firearms.length}</div></div><div><div class="lbl">NFA</div><div class="v">${GV.data.nfa.length}</div></div><div><div class="lbl">Mags</div><div class="v">${magCount()}</div></div></div></a>`; })()}`;
   }
 
   // Original business maxims, one per day of the year.
@@ -518,7 +522,7 @@
   const img = (p, s = "t") => `/vault/img/${p.id}?s=${s}&k=${p.k}`;
   async function loadAlbums() {
     try { const r = await api("vault"); PV.albums = r.albums; PV.total = r.total; } catch (e) { PV.albums = []; toast(e.message); }
-    if (route() === "photos") render();
+    if (["", "photos"].includes(route())) render();
   }
   async function openAlbum(id) {
     PV.album = (PV.albums || []).find((a) => a.id === id) || { id, name: "" }; PV.photos = null; render(); window.scrollTo(0, 0);
@@ -624,6 +628,232 @@
       <button class="pv-x" data-pv="close">×</button>${n > 0 ? '<button class="pv-nav l" data-pv="prev">‹</button>' : ""}${n < ph.length - 1 ? '<button class="pv-nav r" data-pv="next">›</button>' : ""}`;
   }
 
+  // ---------- Gun Vault: the Safe Ledger, inside Life ----------
+  const GV = { data: null, tab: "firearms", open: {}, serial: {}, importing: false, up: null };
+  const GVC = [["firearms", "Firearms"], ["nfa", "NFA"], ["mags", "Mags"], ["spares", "Spares"], ["gear", "Gear"]];
+  const gvFile = (id, s = "t") => `/vault/file/${id}?s=${s}&k=${GV.data?.keys?.[id] || ""}`;
+  const sumP = (p) => (p || []).reduce((a, x) => a + (+x.price || 0), 0);
+  const cwT = (o) => sumP(o.customWork);
+  const GVAL = {
+    firearms: (o) => sumP(o.parts) + cwT(o),
+    nfa: (o) => (+o.price || 0) + sumP(o.accessories) + cwT(o),
+    mags: (o) => (+o.price || 0) * Math.max(0, +o.qty || 0) + (o.bases || []).filter((b) => b?.name).reduce((a, b) => a + (+b.price || 0) * (+b.qty || 0), 0),
+    spares: (o) => (+o.price || 0) + sumP(o.parts),
+    gear: (o) => (+o.price || 0) * Math.max(1, +o.qty || 1),
+  };
+  const DOCS = ["Serial", "Receipt", "Tax Stamp", "Approved Form", "Document"];
+  const coverOf = (o) => { const p = o.photos || []; return p.find((x) => x.id === o.cover && x.type !== "pdf") || p.find((x) => x.type !== "pdf" && !DOCS.includes(x.label)) || p.find((x) => x.type !== "pdf") || (o.img ? { id: o.img } : null) || ((o.parts || []).find((x) => x.img) ? { id: o.parts.find((x) => x.img).img } : null) || ((o.accessories || []).find((x) => x.img) ? { id: o.accessories.find((x) => x.img).img } : null); };
+  const gvTotals = () => { const d = GV.data; if (!d || d.error) return null; const t = {}; let all = 0; for (const [c] of GVC) { t[c] = (d[c] || []).reduce((a, o) => a + GVAL[c](o), 0); all += t[c]; } return { ...t, all }; };
+  const magCount = () => (GV.data?.mags || []).reduce((a, m) => a + (+m.qty || 0), 0);
+
+  async function loadGV() {
+    try { GV.data = await api("gv"); } catch (e) { if (e.message !== "signin") GV.data = GV.data || { error: e.message }; }
+    if (GV.data?.importing) runImport();
+    if (["", "guns"].includes(route())) render();
+  }
+  async function runImport() {
+    if (GV.importing) return;
+    GV.importing = { left: null };
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await api("/gv-import", { method: "POST" });
+        if (!r.ok) throw new Error(r.error || "Import stopped");
+        GV.importing = { left: r.left, total: r.total };
+        if (route() === "guns") render();
+        if (!r.left) break;
+      }
+      GV.importing = false; GV.data = await api("gv"); toast("Safe Ledger imported");
+    } catch (e) { GV.importing = false; if (e.message !== "signin") toast(e.message); }
+    if (["", "guns"].includes(route())) render();
+  }
+  const gvFind = (col, id) => (GV.data?.[col] || []).find((x) => x.id === id);
+  const firearmName = (id) => gvFind("firearms", id)?.name || "";
+
+  function pGuns() {
+    const head = top("Gun Vault", GV.data && !GV.data.error ? `<button class="btn ghost sm" data-act="gv-new">+ Add</button>` : "");
+    if (!GV.data) { setTimeout(loadGV, 0); return head + `<div class="empty">Loading…</div>`; }
+    if (GV.data.error) return head + `<div class="empty">${esc(GV.data.error)}</div>`;
+    const t = gvTotals(), d = GV.data, imp = GV.importing;
+    const banner = imp ? `<div class="pv-prog"><i style="width:${imp.total ? Math.round(((imp.total - imp.left) / imp.total) * 100) : 4}%"></i><span>Bringing in your Safe Ledger${imp.total ? ` · ${imp.total - imp.left} of ${imp.total} files` : "…"}</span></div>` : "";
+    const sum = `<div class="lux" style="--i:0;margin-top:6px"><div class="lux-h"><span>Collection value</span><span class="aic">${svg("shield")}</span></div>
+      <div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div>
+      <div class="cols"><div><div class="lbl">Firearms</div><div class="v">${d.firearms.length} · ${usd(t.firearms, false)}</div></div>
+      <div><div class="lbl">NFA</div><div class="v">${d.nfa.length} · ${usd(t.nfa, false)}</div></div>
+      <div><div class="lbl">Mags</div><div class="v">${magCount()} · ${usd(t.mags, false)}</div></div></div></div>`;
+    const col = GV.tab, items = d[col] || [];
+    const seg = `<div class="seg gv-seg">${GVC.map(([c, n]) => `<button class="${c === col ? "on" : ""}" data-act="gv-tab" data-id="${c}">${n}</button>`).join("")}</div>`;
+    const sub = `<div class="gv-tot"><span>${items.length} ${GVC.find(([c]) => c === col)[1].toLowerCase()}${col === "mags" ? ` · ${magCount()} total` : ""}</span><span>${usd(t[col], false)}</span></div>`;
+    return head + banner + sum + seg + sub + (items.length ? `<div class="gv-list">${items.map((o, i) => gvCard(col, o, i)).join("")}</div>` : `<div class="empty">${imp ? "Importing…" : "Nothing here yet."}</div>`);
+  }
+
+  function gvSub(col, o) {
+    if (col === "firearms") return [o.caliber, o.type].filter(Boolean).join(" · ");
+    if (col === "nfa") return [o.itemType, o.caliber, o.form].filter(Boolean).join(" · ");
+    if (col === "mags") return [o.caliber, o.capacity ? o.capacity + " rd" : "", `×${+o.qty || 0}`].filter(Boolean).join(" · ");
+    return [o.category, o.qty > 1 ? `×${o.qty}` : ""].filter(Boolean).join(" · ");
+  }
+  const kv = (k, v) => (v === "" || v == null ? "" : `<div class="gv-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`);
+  const lines = (title, arr, fmt) => (arr && arr.length ? `<div class="gv-sec">${title}</div><div class="gv-lines">${arr.map(fmt).join("")}</div>` : "");
+  const partLine = (x) => `<div class="gv-line">${x.img && GV.data.keys[x.img] ? `<img src="${gvFile(x.img)}" alt="" loading="lazy">` : ""}<span class="grow">${esc(x.name)}${x.mtype || x.thread ? `<small>${esc([x.mtype, x.thread].filter(Boolean).join(" · "))}</small>` : ""}</span><b>${x.price ? usd(x.price) : "—"}</b></div>`;
+
+  function gvCard(col, o, i) {
+    const key = col + "/" + o.id, open = GV.open[key], c = coverOf(o), val = GVAL[col](o);
+    let body = "";
+    if (open) {
+      const ph = o.photos || [];
+      const strip = `<div class="gv-strip">${ph.map((p, n) => p.type === "pdf"
+        ? `<a class="gv-ph pdf" href="${gvFile(p.id, "f")}" target="_blank" rel="noopener"><span>PDF</span><small>${esc(p.label || "Document")}</small></a>`
+        : `<button class="gv-ph" data-act="gv-view" data-id="${key}|${n}"><img src="${gvFile(p.id)}" alt="" loading="lazy"><small>${esc(p.label || "")}</small></button>`).join("")}
+        <label class="gv-ph add">${GV.up === key ? "<span>Uploading…</span>" : `<span>+</span><small>Photo / PDF</small>`}<input type="file" accept="image/*,application/pdf" multiple data-gvupload="${key}" hidden></label></div>`;
+      const serial = o.serial ? `<button class="gv-serial" data-act="gv-serial" data-id="${key}"><span>Serial</span><b>${GV.serial[key] ? esc(o.serial) : "•••• tap to show"}</b></button>` : "";
+      const sp = o.specs || {};
+      const specs = Object.keys(sp).length ? `<div class="gv-sec">Specs</div><div class="gv-grid">${Object.entries(sp).filter(([, v]) => v).map(([k, v]) => kv(k.replace(/^oal$/, "length").replace(/^msrp$/, "MSRP").replace(/^sku$/, "SKU"), v)).join("")}</div>` : "";
+      let facts = "";
+      if (col === "firearms") facts = kv("Purchased", o.purchaseDate) + kv("From", o.purchasedFrom) + kv("Serial source", o.serialFrom);
+      if (col === "nfa") {
+        const host = o.hostId ? `<button class="gv-link" data-act="gv-goto" data-id="firearms/${esc(o.hostId)}">On ${esc(firearmName(o.hostId) || o.hostId)} ›</button>` : "";
+        facts = `<div class="gv-row"><span class="pill ${/approv/i.test(o.status) ? "good" : "warn"}">${esc(o.status || "Pending")}</span>${host}</div>` + kv("Make", o.make) + kv("Model", o.model) + kv("Price", o.price ? usd(o.price) : "") + kv("Submitted", o.submitted) + kv("Approved", o.approved) + kv("Form #", o.formNumber) + kv("Owner", o.owner) + kv("From", o.purchasedFrom);
+      }
+      if (col === "mags") {
+        const fits = (o.fits || []).map((f) => `<button class="gv-link" data-act="gv-goto" data-id="firearms/${esc(f)}">${esc(firearmName(f) || f)}</button>`).join("");
+        facts = kv("Make", o.make) + kv("Capacity", o.capacity) + kv("Quantity", o.qty) + kv("Each", o.price ? usd(o.price) : "") + (fits ? `<div class="gv-sec">Fits</div><div class="gv-row wrap">${fits}</div>` : "");
+      }
+      if (col === "spares") facts = kv("Category", o.category) + kv("Price", o.price ? usd(o.price) : "") + kv("Type", o.mtype) + kv("Thread", o.thread);
+      if (col === "gear") facts = kv("Category", o.category) + kv("Quantity", o.qty) + kv("Each", o.price ? usd(o.price) : "");
+      const cans = col === "firearms" ? (GV.data.nfa || []).filter((n) => n.hostId === o.id) : [];
+      body = `<div class="gv-body">${strip}${serial}<div class="gv-facts">${facts}</div>
+        ${cans.length ? `<div class="gv-sec">NFA on this gun</div><div class="gv-row wrap">${cans.map((n) => `<button class="gv-link" data-act="gv-goto" data-id="nfa/${esc(n.id)}">${esc(n.name)} ›</button>`).join("")}</div>` : ""}
+        ${lines(col === "nfa" ? "Accessories" : "Build", col === "nfa" ? o.accessories : o.parts, partLine)}
+        ${lines("Custom work", o.customWork, (x) => `<div class="gv-line"><span class="grow">${esc(x.type || "Work")}${x.details ? " · " + esc(x.details) : ""}<small>${esc([x.vendor, x.date].filter(Boolean).join(" · "))}</small></span><b>${usd(x.price)}</b></div>`)}
+        ${lines("Base pads", (o.bases || []).filter((b) => b?.name), (b) => `<div class="gv-line"><span class="grow">${esc(b.name)}${b.plus ? ` <small>+${esc(b.plus)} rounds · ×${esc(b.qty)}</small>` : ""}</span><b>${usd((+b.price || 0) * (+b.qty || 0))}</b></div>`)}
+        ${specs}${o.notes ? `<div class="gv-sec">Notes</div><div class="gv-notes">${esc(o.notes)}</div>` : ""}
+        <div class="gv-acts"><button class="btn ghost sm" data-act="gv-edit" data-id="${key}">Edit</button></div></div>`;
+    }
+    return `<div class="gv-card ${open ? "open" : ""}" id="gv-${esc(o.id)}" style="--d:${Math.min(i, 20) * 45}ms">
+      <button class="gv-head" data-act="gv-open" data-id="${key}"><span class="gv-thumb">${c && GV.data.keys[c.id] ? `<img src="${gvFile(c.id)}" alt="" loading="lazy">` : svg("shield")}</span>
+      <span class="grow"><span class="gv-name">${esc(o.name)}</span><span class="gv-meta">${esc(gvSub(col, o))}</span></span><span class="gv-val">${val ? usd(val, false) : ""}</span></button>${body}</div>`;
+  }
+
+  // Full-screen photo viewer for one item's pictures (PDFs open in a new tab).
+  function gvView(key, n) {
+    const [col, id] = key.split("/"), o = gvFind(col, id); if (!o) return;
+    const ph = (o.photos || []).map((p, i) => ({ ...p, i })).filter((p) => p.type !== "pdf");
+    let k = ph.findIndex((p) => p.i === n); if (k < 0) k = 0;
+    const p = ph[k]; if (!p) return;
+    let v = document.getElementById("gvview");
+    if (!v) {
+      v = document.createElement("div"); v.id = "gvview"; v.className = "pv-view"; document.body.appendChild(v);
+      let x0 = null;
+      v.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
+      v.addEventListener("touchend", (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); }, { passive: true });
+      const step = (d) => { const o2 = gvFind(...v.dataset.key.split("/")); const l = (o2.photos || []).map((p, i) => ({ ...p, i })).filter((p) => p.type !== "pdf"); const j = l.findIndex((p) => p.i === +v.dataset.n) + d; if (l[j]) gvView(v.dataset.key, l[j].i); };
+      v.addEventListener("click", async (e) => {
+        const a = e.target.closest("[data-pv]")?.dataset.pv;
+        if (a === "close" || e.target === v) v.remove();
+        else if (a === "prev") step(-1); else if (a === "next") step(1);
+        else if (a === "cover") { const [c2, i2] = v.dataset.key.split("/"), o2 = gvFind(c2, i2); const ph2 = o2.photos[+v.dataset.n]; await gvSave(c2, { ...o2, cover: ph2.id }); toast("Cover set"); }
+        else if (a === "del") { if (!confirmDel()) return; const [c2, i2] = v.dataset.key.split("/"), o2 = gvFind(c2, i2); const photos = o2.photos.filter((_, j) => j !== +v.dataset.n); await gvSave(c2, { ...o2, photos }); v.remove(); toast("Removed"); }
+      });
+    }
+    v.dataset.key = key; v.dataset.n = p.i;
+    v.innerHTML = `<img src="${gvFile(p.id, "f")}" alt="">
+      <div class="pv-bar"><span>${esc(o.name)} · ${esc(p.label || "Photo")}</span><span>${k + 1} / ${ph.length}</span></div>
+      <div class="pv-tools"><button data-pv="cover">Set cover</button><button data-pv="del" class="bad">Remove</button></div>
+      <button class="pv-x" data-pv="close">×</button>${k > 0 ? '<button class="pv-nav l" data-pv="prev">‹</button>' : ""}${k < ph.length - 1 ? '<button class="pv-nav r" data-pv="next">›</button>' : ""}`;
+  }
+
+  async function gvSave(col, rec) {
+    const { _keys, ...body } = rec;
+    const r = rec.id && gvFind(col, rec.id) ? await api(`gv/${col}/${encodeURIComponent(rec.id)}`, { method: "PUT", body }) : await api(`gv/${col}`, { method: "POST", body });
+    if (r._keys) Object.assign(GV.data.keys, r._keys);
+    delete r._keys;
+    const list = GV.data[col], i = list.findIndex((x) => x.id === r.id);
+    i >= 0 ? (list[i] = r) : list.push(r);
+    render();
+    return r;
+  }
+
+  // Photos and PDFs added from the phone. Photos are resized first (full ≤2400px, thumb ≤640px).
+  async function gvShrink(file) {
+    const { im, u } = await loadImage(file);
+    const out = async (max, q) => { const W = im.naturalWidth, H = im.naturalHeight, k = Math.min(1, max / Math.max(W, H)), c = document.createElement("canvas"); c.width = Math.round(W * k); c.height = Math.round(H * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); return toBlob(c, q); };
+    const full = await out(2400, 0.86), thumb = await out(640, 0.8);
+    URL.revokeObjectURL(u);
+    return { full, thumb };
+  }
+  async function gvUpload(key, list) {
+    const [col, id] = key.split("/");
+    list = [...list]; if (!list.length) return;
+    GV.up = key; render();
+    const added = [];
+    for (const f of list) {
+      try {
+        const fd = new FormData(), pdf = /pdf/i.test(f.type) || /\.pdf$/i.test(f.name);
+        if (pdf) fd.append("file", f, f.name);
+        else { const r = await gvShrink(f); fd.append("file", r.full, "f.jpg"); fd.append("thumb", r.thumb, "t.jpg"); }
+        const res = await fetch("/api/gv/file", { method: "POST", headers: { authorization: "Bearer " + token }, body: fd });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error || "Upload failed");
+        GV.data.keys[d.id] = d.k;
+        added.push({ id: d.id, type: d.type, label: pdf ? f.name.replace(/\.pdf$/i, "").slice(0, 40) || "Document" : "Photo", added: todayKey() });
+      } catch (e) { toast(e.message); }
+    }
+    GV.up = null;
+    const o = gvFind(col, id);
+    if (o && added.length) { await gvSave(col, { ...o, photos: [...(o.photos || []), ...added] }); toast(`${added.length} added`); } else render();
+  }
+  document.addEventListener("change", (e) => { if (e.target.matches("input[data-gvupload]")) { gvUpload(e.target.dataset.gvupload, e.target.files); e.target.value = ""; } });
+
+  // Edit / add sheet. Lists (parts, accessories, base pads, custom work) are rows you can add to or remove.
+  const ROWS = {
+    parts: [["name", "Part", "grow"], ["price", "$", "num"]],
+    accessories: [["name", "Accessory", "grow"], ["price", "$", "num"]],
+    bases: [["name", "Base pad", "grow"], ["plus", "+rds", "num"], ["qty", "Qty", "num"], ["price", "$ ea", "num"]],
+    customWork: [["type", "Work", "grow"], ["vendor", "Vendor", "grow"], ["price", "$", "num"]],
+  };
+  const rowHTML = (list, x = {}) => `<div class="gv-er" data-list="${list}">${ROWS[list].map(([f, ph, cls]) => `<input name="${list}.${f}" placeholder="${ph}" value="${esc(x[f] ?? "")}" class="${cls}" ${cls === "num" ? 'inputmode="decimal"' : ""}>`).join("")}<button type="button" class="gv-x" data-act="gv-rmrow">×</button></div>`;
+  const rowsBlock = (list, title, arr) => `<label>${title}</label><div class="gv-rows" data-rows="${list}">${(arr || []).map((x) => rowHTML(list, x)).join("")}</div><button type="button" class="btn ghost sm" data-act="gv-addrow" data-id="${list}">+ Add ${title.toLowerCase().replace(/s$/, "")}</button>`;
+  const FIELDS = {
+    firearms: [["name", "Name"], ["type", "Type"], ["caliber", "Caliber"], ["serial", "Serial"], ["purchaseDate", "Purchased", "date"], ["purchasedFrom", "From"]],
+    nfa: [["name", "Name"], ["itemType", "Item"], ["make", "Make"], ["model", "Model"], ["caliber", "Caliber"], ["serial", "Serial"], ["price", "Price", "num"], ["form", "Form"], ["status", "Status"], ["submitted", "Submitted", "date"], ["approved", "Approved", "date"], ["formNumber", "Form #"], ["owner", "Owner"], ["purchasedFrom", "From"]],
+    mags: [["name", "Name"], ["make", "Make"], ["caliber", "Caliber"], ["capacity", "Capacity", "num"], ["qty", "Quantity", "num"], ["price", "Price each", "num"]],
+    spares: [["name", "Name"], ["category", "Category"], ["serial", "Serial"], ["price", "Price", "num"]],
+    gear: [["name", "Name"], ["category", "Category"], ["qty", "Quantity", "num"], ["price", "Price each", "num"]],
+  };
+  const LISTS = { firearms: [["parts", "Parts"], ["customWork", "Custom work"]], nfa: [["accessories", "Accessories"]], mags: [["bases", "Base pads"]], spares: [["parts", "Parts"]], gear: [] };
+  function gvEdit(col, o = {}) {
+    const f = FIELDS[col].map(([k, l, t]) => `<div class="gv-ef"><label>${l}</label><input name="${k}" value="${esc(o[k] ?? "")}" ${t === "date" ? 'type="date"' : t === "num" ? 'inputmode="decimal"' : ""} ${k === "name" ? "required" : ""}></div>`).join("");
+    const host = col === "nfa" ? `<div class="gv-ef"><label>Mounted on</label><select name="hostId"><option value="">—</option>${GV.data.firearms.map((g) => `<option value="${esc(g.id)}" ${g.id === o.hostId ? "selected" : ""}>${esc(g.name)}</option>`).join("")}</select></div>` : "";
+    const fits = col === "mags" ? `<label>Fits</label><div class="gv-fits">${GV.data.firearms.map((g) => `<label><input type="checkbox" name="fits" value="${esc(g.id)}" ${(o.fits || []).includes(g.id) ? "checked" : ""}> ${esc(g.name)}</label>`).join("")}</div>` : "";
+    const photos = (o.photos || []).length ? `<label>Photos & documents</label><div class="gv-rows">${o.photos.map((p, n) => `<div class="gv-er"><input name="plabel.${n}" value="${esc(p.label || "")}" class="grow" placeholder="Label"><span class="gv-ptype">${p.type === "pdf" ? "PDF" : "Photo"}</span><label class="gv-rm"><input type="checkbox" name="pdel.${n}"> Remove</label></div>`).join("")}</div>` : "";
+    sheet(`<h2>${o.id ? "Edit" : "Add"} ${esc(GVC.find(([c]) => c === col)[1].replace(/s$/, "").replace("NFA", "NFA item").toLowerCase().replace("nfa item", "NFA item"))}</h2>
+      <form data-form="gv-save" data-id="${col}/${esc(o.id || "")}"><div class="gv-efs">${f}${host}</div>${fits}
+      ${LISTS[col].map(([l, t]) => rowsBlock(l, t, o[l])).join("")}
+      <label>Notes</label><textarea name="notes">${esc(o.notes || "")}</textarea>${photos}
+      <div class="actions">${o.id ? `<button type="button" class="btn danger" data-act="gv-del" data-id="${col}/${esc(o.id)}">Delete</button>` : ""}<span class="sp"></span>
+      <button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
+  }
+  async function gvSubmit(f) {
+    const [col, id] = f.dataset.id.split("/"), o = (id && gvFind(col, id)) || {}, fd = new FormData(f);
+    const rec = { ...o };
+    for (const [k, , t] of FIELDS[col]) { const v = String(fd.get(k) ?? "").trim(); rec[k] = t === "num" ? (v === "" ? "" : +v.replace(/[$,]/g, "") || 0) : v; }
+    if (col === "nfa") rec.hostId = fd.get("hostId") || "";
+    if (col === "mags") rec.fits = fd.getAll("fits");
+    for (const [l] of LISTS[col]) {
+      const old = o[l] || [];
+      rec[l] = [...f.querySelectorAll(`[data-rows="${l}"] .gv-er`)].map((row, n) => {
+        const x = { ...(old[n] || {}) };
+        ROWS[l].forEach(([k, , cls]) => { const v = row.querySelector(`[name="${l}.${k}"]`).value.trim(); x[k] = cls === "num" ? (v === "" ? 0 : +v.replace(/[$,]/g, "") || 0) : v; });
+        return x;
+      }).filter((x) => x.name || x.type);
+    }
+    rec.notes = String(fd.get("notes") || "");
+    if (o.photos) rec.photos = o.photos.map((p, n) => ({ ...p, label: String(fd.get("plabel." + n) ?? p.label) })).filter((_, n) => !fd.get("pdel." + n));
+    const r = await gvSave(col, rec);
+    GV.open[col + "/" + r.id] = true;
+    closeSheet(); render();
+  }
+
   // ---------- Gerald ----------
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
@@ -724,6 +954,16 @@
         case "pv-amenu": albumSheet(PV.album); break;
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
+        case "gv-tab": GV.tab = id; render(); break;
+        case "gv-open": GV.open[id] = !GV.open[id]; render(); break;
+        case "gv-serial": GV.serial[id] = !GV.serial[id]; render(); break;
+        case "gv-view": { const [k, n] = id.split("|"); gvView(k, +n); break; }
+        case "gv-goto": { const [c, i] = id.split("/"); GV.tab = c; GV.open[id] = true; render(); setTimeout(() => document.getElementById("gv-" + i)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60); break; }
+        case "gv-new": gvEdit(GV.tab); break;
+        case "gv-edit": { const [c, i] = id.split("/"); gvEdit(c, gvFind(c, i)); break; }
+        case "gv-del": if (confirmDel()) { const [c, i] = id.split("/"); await api(`gv/${c}/${encodeURIComponent(i)}`, { method: "DELETE" }); GV.data[c] = GV.data[c].filter((x) => x.id !== i); closeSheet(); render(); toast("Deleted"); } break;
+        case "gv-addrow": el.previousElementSibling.insertAdjacentHTML("beforeend", rowHTML(id)); el.previousElementSibling.lastElementChild.querySelector("input").focus(); break;
+        case "gv-rmrow": el.closest(".gv-er").remove(); break;
       }
     } catch (x) { if (x.message !== "signin") toast(x.message); }
   });
@@ -750,6 +990,7 @@
     try {
       switch (f.dataset.form) {
         case "gerald": f.reset(); askGerald(v.q); break;
+        case "gv-save": await gvSubmit(f); break;
         case "pv-album": {
           if (id) { const r = await api(`vault/albums/${id}`, { method: "PUT", body: { name: v.name } }); PV.album = { ...PV.album, name: r.name }; }
           else { const r = await api("vault/albums", { method: "POST", body: { name: v.name } }); PV.albums = [...(PV.albums || []), r]; closeSheet(); openAlbum(r.id); break; }

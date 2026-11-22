@@ -12,7 +12,7 @@ const $ = (n) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits
 const nowNY = () => new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
 const todayNY = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-function factSheet({ todo, wish, pkgs, trim, money }) {
+function factSheet({ todo, wish, pkgs, trim, money, gv }) {
   const out = [];
   const open = todo.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
   out.push(`## To-do (${open.length} open)`);
@@ -47,6 +47,16 @@ function factSheet({ todo, wish, pkgs, trim, money }) {
     out.push(`Transactions, newest first (positive = money out, negative = money in):`);
     money.transactions.forEach((t) => out.push(`${t.date} | ${t.name} | ${t.amount} | ${t.account}${t.pending ? " | pending" : ""}`));
   } else out.push(`Not available right now: ${money.why}`);
+  // Gun Vault (no serial numbers are shared with the model)
+  if (gv) {
+    const sum = (p) => (p || []).reduce((a, x) => a + (+x.price || 0), 0);
+    out.push(`## Gun Vault`);
+    gv.firearms.forEach((g) => out.push(`- Firearm: ${g.name} (${[g.caliber, g.type].filter(Boolean).join(", ")}) — build value $${Math.round(sum(g.parts) + sum(g.customWork))}`));
+    gv.nfa.forEach((n) => out.push(`- NFA: ${n.name} (${[n.itemType, n.caliber, n.form, n.status].filter(Boolean).join(", ")}) $${Math.round(+n.price || 0)}${n.hostId ? ` on ${gv.firearms.find((g) => g.id === n.hostId)?.name || n.hostId}` : ""}`));
+    out.push(`- Mags: ${gv.mags.map((m) => `${m.name} ${m.caliber || ""} x${m.qty || 0}`).join("; ")}`);
+    out.push(`- Spares: ${gv.spares.map((x) => x.name).join("; ")}`);
+    out.push(`- Gear: ${gv.gear.map((x) => x.name).join("; ")}`);
+  }
   return out.join("\n");
 }
 
@@ -111,9 +121,11 @@ export default async (req) => {
   while (history.length && history[0].role !== "user") history.shift();
 
   const s = store();
-  const [todo, wish, pkgs, trim, money] = await Promise.all([
+  const gvRead = async () => { const o = {}; for (const c of ["firearms", "nfa", "mags", "spares", "gear"]) o[c] = await readPrefix(s, `gv/${c}/`); return o; };
+  const [todo, wish, pkgs, trim, money, gv] = await Promise.all([
     readPrefix(s, "todo/"), readPrefix(s, "wish/"), readPrefix(s, "pkgs/"),
     trimData().catch((e) => ({ ready: false, why: e.message })), moneyData(s, 400).catch((e) => ({ ready: false, why: e.message })),
+    gvRead().catch(() => null),
   ]);
 
   // Netlify's AI Gateway normally fills in ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL; pass them explicitly in case
@@ -124,7 +136,7 @@ export default async (req) => {
   let changed = false, reply = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
       if (!uses.length || r.stop_reason !== "tool_use") { reply = text; break; }
