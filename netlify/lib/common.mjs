@@ -22,7 +22,7 @@ export async function readPrefix(s, prefix) {
 const enc = new TextEncoder();
 const secret = () => env("LIFE_SECRET") || "life:" + env("LIFE_LINK_KEY");
 const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-async function sign(msg) {
+export async function sign(msg) {
   const key = await crypto.subtle.importKey("raw", enc.encode(secret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return b64(await crypto.subtle.sign("HMAC", key, enc.encode(msg)));
 }

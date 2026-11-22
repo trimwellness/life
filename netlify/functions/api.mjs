@@ -2,6 +2,7 @@
 import { store, COLS, env, json, clip, num, newId, readPrefix, makeToken, signedIn, same } from "../lib/common.mjs";
 import { pushReady, hashOf, sendPush } from "../lib/push.mjs";
 import { trimData, moneyData } from "../lib/feeds.mjs";
+import { odReady, makeState, authorizeUrl, graph } from "../lib/onedrive.mjs";
 import { parcelReady, checkPackages, guessCarrier, clean } from "../lib/parcel.mjs";
 
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
@@ -42,6 +43,44 @@ async function login(req, s) {
   return json({ token: await makeToken() });
 }
 
+// ---- Photo Vault (OneDrive) ----
+const isMedia = (it) => it.image || it.photo || it.video || /^(image|video)\//.test(it.file?.mimeType || "");
+async function photos(req, s, p, url) {
+  if (!odReady()) return json({ ready: false, configured: false });
+  const od = (await s.get("meta/onedrive", { type: "json" })) || {};
+  if (!p[0]) return json({ ready: true, configured: true, connected: !!od.refresh, account: od.account || "", folders: od.folders || [] });
+  if (p[0] === "start") return json({ url: authorizeUrl(req, await makeState()) });
+  if (p[0] === "disconnect" && req.method === "POST") { await s.setJSON("meta/onedrive", { folders: od.folders || [] }); return json({ ok: true }); }
+  if (p[0] === "folders" && req.method === "PUT") {
+    const b = await req.json().catch(() => ({}));
+    const folders = (Array.isArray(b.folders) ? b.folders : []).slice(0, 30).map((f) => ({ id: clip(f.id, 120), name: clip(f.name, 120), path: clip(f.path, 400) })).filter((f) => f.id);
+    await s.setJSON("meta/onedrive", { ...od, folders });
+    return json({ folders });
+  }
+  if (p[0] === "browse") {
+    const id = url.searchParams.get("id") || "root";
+    const base = id === "root" ? "/me/drive/root" : `/me/drive/items/${encodeURIComponent(id)}`;
+    const [me, kids] = await Promise.all([graph(s, `${base}?$select=id,name,parentReference`), graph(s, `${base}/children?$select=id,name,folder,image,photo,video,file&$top=500`)]);
+    const path = me.parentReference?.path ? decodeURIComponent(me.parentReference.path.replace(/^\/drive\/root:?/, "")) + "/" + me.name : "";
+    return json({ id: me.id, name: id === "root" ? "OneDrive" : me.name, path: path || "/", parent: id === "root" ? null : me.parentReference?.id || "root",
+      folders: (kids.value || []).filter((k) => k.folder).map((k) => ({ id: k.id, name: k.name, count: k.folder.childCount })).sort((a, b) => a.name.localeCompare(b.name)),
+      media: (kids.value || []).filter(isMedia).length });
+  }
+  if (p[0] === "items") {
+    const id = url.searchParams.get("folder");
+    if (!id) return json({ error: "folder needed" }, 400);
+    const next = url.searchParams.get("next");
+    const d = await graph(s, next && next.startsWith("https://graph.microsoft.com/") ? next : `/me/drive/items/${encodeURIComponent(id)}/children?$expand=thumbnails&$top=120`);
+    const items = (d.value || []).filter(isMedia).map((it) => {
+      const t = it.thumbnails?.[0] || {};
+      return { id: it.id, name: it.name, video: !!it.video || /^video\//.test(it.file?.mimeType || ""), taken: it.photo?.takenDateTime || it.createdDateTime,
+        thumb: t.medium?.url || t.small?.url || "", large: t.large?.url || t.medium?.url || "", full: it["@microsoft.graph.downloadUrl"] || "" };
+    });
+    return json({ items, next: d["@odata.nextLink"] || null });
+  }
+  return json({ error: "not found" }, 404);
+}
+
 export default async (req) => {
   const s = store();
   const url = new URL(req.url);
@@ -56,7 +95,7 @@ export default async (req) => {
       await clearGuns(s);
       const out = {};
       for (const c of COLS) out[c] = await readPrefix(s, c + "/");
-      out.status = { parcel: parcelReady(), push: pushReady(), finance: !!env("FINANCE_PIN"), trim: !!env("LIFE_FEED_KEY"), photos: !!env("MS_CLIENT_ID") };
+      out.status = { parcel: parcelReady(), push: pushReady(), finance: !!env("FINANCE_PIN"), trim: !!env("LIFE_FEED_KEY"), photos: odReady() };
       return json(out);
     }
 
@@ -86,7 +125,7 @@ export default async (req) => {
 
     if (parts[0] === "trim") return json(await trimData());
     if (parts[0] === "money") return json(await moneyData(s));
-    if (parts[0] === "photos") return json({ ready: false, why: "OneDrive hookup coming next" });
+    if (parts[0] === "photos") return photos(req, s, parts.slice(1), url);
 
     if (parts[0] === "pkgs" && parts[1] === "check" && m === "POST") {
       const r = await checkPackages(s);

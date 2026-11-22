@@ -228,6 +228,22 @@ main h1::before{content:attr(data-eyebrow);display:block;font:600 11px/1 -apple-
 .duefield span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8d8471;white-space:nowrap}
 .duefield input{border:0;background:transparent;box-shadow:none;padding:11px 8px;min-height:44px;flex:1;text-align:right;color:var(--gold2)}
 .duefield input:focus{box-shadow:none}
+/* ---- Photo Vault ---- */
+.pv-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.pv-chips::-webkit-scrollbar{display:none}
+.pv-chips button{flex:none;background:rgba(8,8,7,.75);border:1px solid rgba(212,175,55,.4);color:var(--gold2);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
+.pv-chips button.on{background:var(--goldg);color:#1a1306;border-color:transparent;font-weight:600}
+.pv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:16px;overflow:hidden}
+.pv-ph{position:relative;aspect-ratio:1;border:0;padding:0;background:#111;cursor:pointer;overflow:hidden;animation:up .45s both;animation-delay:var(--d)}
+.pv-ph img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.pv-ph:active img{transform:scale(1.06)}
+.pv-play{position:absolute;right:6px;bottom:6px;color:#fff;font-size:12px;text-shadow:0 1px 4px #000}
+.pv-view{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.96);display:flex;align-items:center;justify-content:center;animation:fade .2s}
+.pv-view img,.pv-view video{max-width:100%;max-height:86vh;object-fit:contain}
+.pv-bar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 16px);display:flex;justify-content:space-between;padding:0 20px;color:#bfb49a;font-size:13px;letter-spacing:.08em}
+.pv-x{position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:14px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(212,175,55,.45);background:rgba(0,0,0,.6);color:var(--gold2);font-size:24px;cursor:pointer}
+.pv-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:64px;border:0;background:none;color:rgba(246,221,140,.8);font-size:40px;cursor:pointer}
+.pv-nav.l{left:4px}.pv-nav.r{right:4px}
 /* Bottom tabs */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,rgba(10,10,10,.75),rgba(4,4,4,.96));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-top:1px solid rgba(212,175,55,.3)}
 nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);position:relative}
@@ -243,6 +259,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=30"></script>
+<script src="/app.js?v=31"></script>
 </body>
 </html>
