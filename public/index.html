@@ -229,6 +229,23 @@ main h1::before{content:attr(data-eyebrow);display:block;font:600 11px/1 -apple-
 .duefield input{border:0;background:transparent;box-shadow:none;padding:11px 8px;min-height:44px;flex:1;text-align:right;color:var(--gold2)}
 .duefield input:focus{box-shadow:none}
 /* ---- Photo Vault ---- */
+.pv-albums{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pv-album{background:none;border:0;padding:0;text-align:left;color:inherit;cursor:pointer;font:inherit;animation:up .5s both;animation-delay:var(--d)}
+.pv-cover{aspect-ratio:1;border-radius:18px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(160deg,#1c1913,#0a0908);border:1px solid rgba(212,175,55,.4);box-shadow:0 16px 30px -12px rgba(0,0,0,.9)}
+.pv-cover img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+.pv-album:active .pv-cover img{transform:scale(1.05)}
+.pv-cover span svg{width:34px;height:34px;stroke:var(--gold);opacity:.7}
+.pv-aname{font:400 19px/1.2 "Didot","Bodoni 72",Georgia,serif;color:#f6efdc;margin:10px 2px 2px}
+.pv-acount{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8d8471;margin:0 2px}
+.pv-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 14px;padding:13px}
+.pv-add svg{width:18px;height:18px;stroke:#1a1306}
+.pv-prog{position:relative;height:30px;border-radius:999px;border:1px solid rgba(212,175,55,.4);overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.5)}
+.pv-prog i{position:absolute;inset:0 auto 0 0;background:var(--goldg);opacity:.35;transition:width .3s}
+.pv-prog span{position:relative;display:block;text-align:center;line-height:28px;font-size:13px;color:var(--gold2)}
+.pv-tools{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:14px;display:flex;gap:8px}
+.pv-tools button,.pv-move button{background:rgba(0,0,0,.6);border:1px solid rgba(212,175,55,.45);color:var(--gold2);border-radius:999px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+.pv-tools .bad{color:#ff9585;border-color:rgba(255,122,107,.45)}
+.pv-move{position:absolute;top:calc(env(safe-area-inset-top) + 58px);left:14px;right:14px;display:flex;flex-wrap:wrap;gap:8px}
 .pv-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
 .pv-chips::-webkit-scrollbar{display:none}
 .pv-chips button{flex:none;background:rgba(8,8,7,.75);border:1px solid rgba(212,175,55,.4);color:var(--gold2);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
@@ -259,6 +276,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=31"></script>
+<script src="/app.js?v=32"></script>
 </body>
 </html>

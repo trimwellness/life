@@ -513,72 +513,115 @@
       ${tx.length ? `<h3>Recent</h3><div class="list">${tx.map((x) => `<div class="item"><div class="grow"><div class="t">${esc(x.name)}</div><div class="sub">${esc(x.date)}${x.pending ? " · pending" : ""} · ${esc(x.account || "")}</div></div><div class="money" style="color:${x.amount < 0 ? "var(--good)" : "var(--text)"}">${x.amount < 0 ? "+" : "−"}${usd(Math.abs(x.amount))}</div></div>`).join("")}</div>` : ""}`;
   }
 
-  // ---------- Photo Vault (OneDrive) ----------
-  const PV = { info: null, folder: null, items: [], next: null, loading: false, browse: null, pick: [] };
-  async function loadPhotos() {
-    try { PV.info = await api("photos"); } catch (e) { PV.info = { ready: false, configured: true, connected: false, err: e.message }; }
-    const f = PV.info?.folders || [];
-    if (f.length && (!PV.folder || !f.some((x) => x.id === PV.folder))) PV.folder = f[0].id;
+  // ---------- Photo Vault: your own albums, uploaded from the phone ----------
+  const PV = { albums: null, album: null, photos: [], up: null };
+  const img = (p, s = "t") => `/vault/img/${p.id}?s=${s}&k=${p.k}`;
+  async function loadAlbums() {
+    try { const r = await api("vault"); PV.albums = r.albums; PV.total = r.total; } catch (e) { PV.albums = []; toast(e.message); }
     if (route() === "photos") render();
-    if (PV.info?.connected && PV.folder && !PV.items.length) loadItems();
   }
-  async function loadItems(more) {
-    if (PV.loading) return;
-    PV.loading = true; if (!more) { PV.items = []; PV.next = null; }
-    if (route() === "photos") render();
-    try {
-      const r = await api(`photos/items?folder=${encodeURIComponent(PV.folder)}${more && PV.next ? "&next=" + encodeURIComponent(PV.next) : ""}`);
-      PV.items = more ? PV.items.concat(r.items) : r.items; PV.next = r.next;
-    } catch (e) { toast(e.message); }
-    PV.loading = false;
-    if (route() === "photos") render();
+  async function openAlbum(id) {
+    PV.album = (PV.albums || []).find((a) => a.id === id) || { id, name: "" }; PV.photos = null; render(); window.scrollTo(0, 0);
+    try { const r = await api(`vault/albums/${id}/photos`); PV.album = { ...PV.album, ...r.album }; PV.photos = r.photos; } catch (e) { toast(e.message); PV.photos = []; }
+    render();
   }
   function pPhotos() {
-    const i = PV.info;
-    const head = top("Photo Vault", i?.connected ? `<button class="btn ghost sm" data-act="pv-manage">Folders</button>` : "");
-    if (!i) { setTimeout(loadPhotos, 0); return head + `<div class="empty">Loading…</div>`; }
-    if (!i.configured) return head + `<div class="card"><div style="font-weight:600;font-size:17px;color:#f6efdc">Connect OneDrive</div><div class="sub" style="margin-top:6px">Waiting on the Microsoft app registration (MS_CLIENT_ID and MS_CLIENT_SECRET on Netlify). Once those are in, a Connect button shows up here.</div></div>`;
-    if (!i.connected) return head + `<div class="card" style="text-align:center;padding:28px 18px"><div class="hero-num" style="font-size:28px">Your OneDrive</div>
-      <div class="sub" style="margin:8px 0 18px">Sign in with Microsoft once. Life only gets read access to your files.</div><button class="btn" data-act="pv-connect">Connect OneDrive</button></div>`;
-    const folders = i.folders || [];
-    if (!folders.length) return head + `<div class="card" style="text-align:center;padding:26px 18px"><div class="sub" style="margin-bottom:14px">Connected as ${esc(i.account)}. Pick the folders you want in the vault.</div><button class="btn" data-act="pv-manage">Choose folders</button></div>`;
-    const chips = `<div class="pv-chips">${folders.map((f) => `<button class="${f.id === PV.folder ? "on" : ""}" data-act="pv-folder" data-id="${esc(f.id)}">${esc(f.name)}</button>`).join("")}</div>`;
-    const grid = PV.items.length
-      ? `<div class="pv-grid">${PV.items.map((p, n) => `<button class="pv-ph" data-act="pv-open" data-id="${n}" style="--d:${Math.min(n, 30) * 20}ms"><img loading="lazy" src="${esc(p.thumb)}" alt="">${p.video ? '<span class="pv-play">▶</span>' : ""}</button>`).join("")}</div>
-        ${PV.next ? `<div style="text-align:center;margin:16px 0"><button class="btn ghost" data-act="pv-more">${PV.loading ? "Loading…" : "Load more"}</button></div>` : ""}`
-      : `<div class="empty">${PV.loading ? "Loading…" : "No photos in this folder."}</div>`;
-    return head + chips + grid;
+    if (PV.album) return pAlbum();
+    const head = top("Photo Vault", `<button class="btn ghost sm" data-act="pv-new">+ Album</button>`);
+    if (!PV.albums) { setTimeout(loadAlbums, 0); return head + `<div class="empty">Loading…</div>`; }
+    if (!PV.albums.length) return head + `<div class="card" style="text-align:center;padding:30px 18px"><div class="hero-num" style="font-size:28px">Start your vault</div>
+      <div class="sub" style="margin:8px 0 18px">Make an album, then add photos from your phone.</div><button class="btn" data-act="pv-new">Create first album</button></div>`;
+    return head + `<div class="pv-albums">${PV.albums.map((a, i) => `<button class="pv-album" data-act="pv-album" data-id="${a.id}" style="--d:${i * 60}ms">
+        <div class="pv-cover">${a.cover ? `<img loading="lazy" src="${img(a.cover)}" alt="">` : `<span>${svg("photo")}</span>`}</div>
+        <div class="pv-aname">${esc(a.name)}</div><div class="pv-acount">${a.count} photo${a.count === 1 ? "" : "s"}</div></button>`).join("")}</div>`;
   }
-  // Folder picker: browse OneDrive, add or remove folders.
-  async function pvBrowse(id = "root") {
-    try { PV.browse = await api("photos/browse?id=" + encodeURIComponent(id)); } catch (e) { return toast(e.message); }
-    pvSheet();
+  function pAlbum() {
+    const a = PV.album, ph = PV.photos;
+    const head = `<div class="top"><button class="back" data-act="pv-back">‹ Albums</button><div style="flex:1"></div><button class="btn ghost sm" data-act="pv-amenu">Edit</button></div>
+      <h1 data-eyebrow="Photo Vault">${esc(a.name)}</h1>`;
+    const add = `<label class="btn pv-add">${svg("photo")} Add photos<input type="file" accept="image/*" multiple data-upload hidden></label>`;
+    const prog = PV.up ? `<div class="pv-prog"><i style="width:${Math.round((PV.up.done / PV.up.total) * 100)}%"></i><span>Uploading ${PV.up.done} of ${PV.up.total}…</span></div>` : "";
+    if (!ph) return head + add + `<div class="empty">Loading…</div>`;
+    return head + add + prog + (ph.length
+      ? `<div class="pv-grid">${ph.map((p, n) => `<button class="pv-ph" data-act="pv-open" data-id="${n}" style="--d:${Math.min(n, 30) * 18}ms"><img loading="lazy" src="${img(p)}" alt=""></button>`).join("")}</div>`
+      : `<div class="empty">No photos yet. Tap Add photos.</div>`);
   }
-  function pvSheet() {
-    const b = PV.browse, picked = PV.pick.some((f) => f.id === b.id), isRoot = !b.parent;
-    sheet(`<h2>Choose folders</h2><div class="sub" style="margin:4px 0 12px">${esc(b.path)}</div>
-      <div class="row">${isRoot ? "" : `<button class="btn ghost sm" data-act="pv-up" data-id="${esc(b.parent)}">‹ Back</button>`}
-      ${isRoot ? "" : `<button class="btn sm" data-act="pv-toggle" data-id="${esc(b.id)}">${picked ? "✓ In vault" : `+ Add “${esc(b.name)}”`}${b.media ? ` · ${b.media}` : ""}</button>`}</div>
-      <div class="list" style="margin-top:12px">${b.folders.map((f) => `<div class="item" data-act="pv-into" data-id="${esc(f.id)}" style="cursor:pointer"><div class="grow"><div class="t">📁 ${esc(f.name)}</div><div class="sub">${f.count} items</div></div><span class="sub">›</span></div>`).join("") || `<div class="item"><div class="sub">No folders inside.</div></div>`}</div>
-      ${PV.pick.length ? `<h3>In the vault</h3><div class="pv-chips">${PV.pick.map((f) => `<button class="on" data-act="pv-toggle" data-id="${esc(f.id)}">${esc(f.name)} ✕</button>`).join("")}</div>` : ""}
-      <div class="actions"><button type="button" class="btn danger sm" data-act="pv-disconnect">Disconnect</button><span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="pv-save">Save</button></div>`);
+
+  // Resize on the phone before upload: full ≤2400px, thumb ≤480px (square crop), JPEG.
+  function loadImage(file) {
+    return new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => res({ im, u }); im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("Couldn’t read " + file.name)); }; im.src = u; });
   }
-  // Full-screen viewer: tap arrows or swipe.
+  const toBlob = (c, q) => new Promise((r) => c.toBlob(r, "image/jpeg", q));
+  async function shrink(file) {
+    const { im, u } = await loadImage(file);
+    const W = im.naturalWidth, H = im.naturalHeight, k = Math.min(1, 2400 / Math.max(W, H));
+    const c = document.createElement("canvas"); c.width = Math.round(W * k); c.height = Math.round(H * k);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    const full = await toBlob(c, 0.86);
+    const side = Math.min(W, H), t = document.createElement("canvas"); t.width = t.height = 480;
+    t.getContext("2d").drawImage(im, (W - side) / 2, (H - side) / 2, side, side, 0, 0, 480, 480);
+    const thumb = await toBlob(t, 0.78);
+    URL.revokeObjectURL(u);
+    return { full, thumb, w: c.width, h: c.height };
+  }
+  async function uploadFiles(files) {
+    files = [...files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name));
+    if (!files.length || !PV.album) return;
+    PV.up = { done: 0, total: files.length }; render();
+    let failed = 0;
+    for (const f of files) {
+      try {
+        const r = await shrink(f), fd = new FormData();
+        fd.append("album", PV.album.id); fd.append("name", f.name); fd.append("w", r.w); fd.append("h", r.h); fd.append("takenAt", f.lastModified || Date.now());
+        fd.append("thumb", r.thumb, "t.jpg"); fd.append("full", r.full, "f.jpg");
+        const res = await fetch("/api/vault/upload", { method: "POST", headers: { authorization: "Bearer " + token }, body: fd });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.error || "Upload failed");
+        PV.photos = [d, ...(PV.photos || [])];
+      } catch (e) { failed++; console.error(e); }
+      PV.up.done++; render();
+    }
+    PV.up = null; render();
+    toast(failed ? `${files.length - failed} added · ${failed} failed` : `${files.length} photo${files.length === 1 ? "" : "s"} added`);
+    PV.albums = null; // refresh counts/covers next time
+  }
+  document.addEventListener("change", (e) => { if (e.target.matches("input[data-upload]")) { uploadFiles(e.target.files); e.target.value = ""; } });
+
+  function albumSheet(a) {
+    sheet(`<h2>${a ? "Edit album" : "New album"}</h2><form data-form="pv-album" data-id="${a?.id || ""}"><label>Name</label><input name="name" value="${esc(a?.name || "")}" placeholder="e.g. Wedding" required autofocus>
+      <div class="actions">${a ? `<button type="button" class="btn danger" data-act="pv-adel" data-id="${a.id}">Delete album</button>` : ""}<span class="sp"></span>
+      <button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">${a ? "Save" : "Create"}</button></div></form>`);
+  }
+
+  // Full-screen viewer: swipe or arrows; set as cover, move or delete.
   function pvView(n) {
-    const p = PV.items[n]; if (!p) return;
+    const ph = PV.photos || [], p = ph[n]; if (!p) return;
     let v = document.getElementById("pvview");
     if (!v) {
       v = document.createElement("div"); v.id = "pvview"; v.className = "pv-view"; document.body.appendChild(v);
       let x0 = null;
       v.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
       v.addEventListener("touchend", (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) pvView(+v.dataset.n + (dx < 0 ? 1 : -1)); }, { passive: true });
-      v.addEventListener("click", (e) => { const a = e.target.dataset.pv; if (a === "close" || e.target === v) v.remove(); else if (a === "prev") pvView(+v.dataset.n - 1); else if (a === "next") pvView(+v.dataset.n + 1); });
+      v.addEventListener("click", async (e) => {
+        const a = e.target.closest("[data-pv]")?.dataset.pv, i = +v.dataset.n, cur = (PV.photos || [])[i];
+        if (a === "close" || e.target === v) v.remove();
+        else if (a === "prev") pvView(i - 1);
+        else if (a === "next") pvView(i + 1);
+        else if (a === "cover" && cur) { await api(`vault/albums/${PV.album.id}`, { method: "PUT", body: { cover: cur.id } }); toast("Album cover set"); PV.albums = null; }
+        else if (a === "del" && cur) { if (!confirmDel()) return; await api(`vault/photos/${cur.id}`, { method: "DELETE" }); PV.photos.splice(i, 1); PV.albums = null; render(); if (!PV.photos.length) v.remove(); else pvView(Math.min(i, PV.photos.length - 1)); }
+        else if (a === "move" && cur) {
+          const others = (PV.albums || []).filter((x) => x.id !== PV.album.id);
+          if (!others.length) return toast("Make another album first");
+          v.querySelector(".pv-move").innerHTML = others.map((x) => `<button data-pv="to" data-id="${x.id}">${esc(x.name)}</button>`).join("");
+        } else if (a === "to" && cur) { await api(`vault/photos/${cur.id}`, { method: "PUT", body: { album: e.target.dataset.id } }); PV.photos.splice(i, 1); PV.albums = null; toast("Moved"); render(); if (!PV.photos.length) v.remove(); else pvView(Math.min(i, PV.photos.length - 1)); }
+      });
     }
     v.dataset.n = n;
-    const when = p.taken ? new Date(p.taken).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
-    v.innerHTML = `${p.video ? `<video src="${esc(p.full)}" controls playsinline autoplay></video>` : `<img src="${esc(p.large || p.thumb)}" alt="">`}
-      <div class="pv-bar"><span>${esc(when)}</span><span>${n + 1} / ${PV.items.length}</span></div>
-      <button class="pv-x" data-pv="close">×</button>${n > 0 ? '<button class="pv-nav l" data-pv="prev">‹</button>' : ""}${n < PV.items.length - 1 ? '<button class="pv-nav r" data-pv="next">›</button>' : ""}`;
+    const when = p.takenAt ? new Date(p.takenAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
+    v.innerHTML = `<img src="${img(p, "f")}" alt="">
+      <div class="pv-bar"><span>${esc(when)}</span><span>${n + 1} / ${ph.length}</span></div>
+      <div class="pv-tools"><button data-pv="cover">Set cover</button><button data-pv="move">Move</button><button data-pv="del" class="bad">Delete</button></div><div class="pv-move"></div>
+      <button class="pv-x" data-pv="close">×</button>${n > 0 ? '<button class="pv-nav l" data-pv="prev">‹</button>' : ""}${n < ph.length - 1 ? '<button class="pv-nav r" data-pv="next">›</button>' : ""}`;
   }
 
   // ---------- Gerald ----------
@@ -675,14 +718,11 @@
         case "pkg-archive": { const p = find("pkgs"); await save("pkgs", { ...p, archived: !p.archived }); break; }
         case "pkg-del": if (confirmDel()) await remove("pkgs", id); break;
         case "push-on": pushOn(); break;
-        case "pv-connect": { const r = await api("photos/start"); location.href = r.url; break; }
-        case "pv-manage": PV.pick = (PV.info?.folders || []).slice(); pvBrowse("root"); break;
-        case "pv-into": case "pv-up": pvBrowse(id); break;
-        case "pv-toggle": { const b = PV.browse, f = PV.pick.find((x) => x.id === id); if (f) PV.pick = PV.pick.filter((x) => x.id !== id); else if (b && b.id === id) PV.pick.push({ id: b.id, name: b.name, path: b.path }); pvSheet(); break; }
-        case "pv-save": { const r = await api("photos/folders", { method: "PUT", body: { folders: PV.pick } }); PV.info.folders = r.folders; closeSheet(); PV.folder = r.folders[0]?.id || null; PV.items = []; render(); if (PV.folder) loadItems(); break; }
-        case "pv-disconnect": if (confirmDel()) { await api("photos/disconnect", { method: "POST" }); closeSheet(); PV.info = null; PV.items = []; loadPhotos(); } break;
-        case "pv-folder": PV.folder = id; loadItems(); break;
-        case "pv-more": loadItems(true); break;
+        case "pv-new": albumSheet(); break;
+        case "pv-album": openAlbum(id); break;
+        case "pv-back": PV.album = null; PV.photos = []; if (!PV.albums) loadAlbums(); render(); break;
+        case "pv-amenu": albumSheet(PV.album); break;
+        case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
       }
     } catch (x) { if (x.message !== "signin") toast(x.message); }
@@ -710,6 +750,11 @@
     try {
       switch (f.dataset.form) {
         case "gerald": f.reset(); askGerald(v.q); break;
+        case "pv-album": {
+          if (id) { const r = await api(`vault/albums/${id}`, { method: "PUT", body: { name: v.name } }); PV.album = { ...PV.album, name: r.name }; }
+          else { const r = await api("vault/albums", { method: "POST", body: { name: v.name } }); PV.albums = [...(PV.albums || []), r]; closeSheet(); openAlbum(r.id); break; }
+          PV.albums = null; closeSheet(); render(); break;
+        }
         case "todo-add": await save("todo", { text: v.text, due: v.due }); break;
         case "todo-save": { const t = D.todo.find((x) => x.id === id); await save("todo", { ...t, text: v.text, due: v.due, notes: v.notes }); closeSheet(); break; }
         case "wish-save": { const w = D.wish.find((x) => x.id === id) || {}; await save("wish", { ...w, id, ...v }); closeSheet(); break; }
@@ -743,7 +788,6 @@
   document.addEventListener("focusout", () => setTimeout(applyUpdate, 300));
   try { if (sessionStorage.getItem("life.updated")) { sessionStorage.removeItem("life.updated"); setTimeout(() => toast("Life updated"), 900); } } catch (_) {}
 
-  { const m = location.hash.match(/[?&]od=([^&]+)/); if (m) { const msg = decodeURIComponent(m[1]); history.replaceState(null, "", "/#photos"); setTimeout(() => toast(msg === "connected" ? "OneDrive connected" : msg), 800); } }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.open) location.hash = e.data.open; });
   linkSignIn().then(boot, () => {});
