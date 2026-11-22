@@ -147,58 +147,60 @@
   function watchSVG() {
     const c = 150, P = (a, r) => [c + r * Math.sin((a * Math.PI) / 180), c - r * Math.cos((a * Math.PI) / 180)];
     const L = (a, r1, r2, st) => { const [x1, y1] = P(a, r1), [x2, y2] = P(a, r2); return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${st}/>`; };
-    const track = [], nums = [], idx = [];
-    for (let i = 0; i < 300; i++) { // fifth-of-a-second chrono scale on the outer track
-      const a = i * 1.2, big = i % 25 === 0, mid = i % 5 === 0;
-      track.push(L(a, 121, big ? 110 : mid ? 114 : 117.5, `stroke="#e9d38a" stroke-width="${big ? 1.4 : mid ? 1 : 0.5}" opacity="${mid ? 0.9 : 0.55}"`));
-    }
-    for (let n = 5; n <= 60; n += 5) { const [x, y] = P(n * 6, 128.5); nums.push(`<text x="${x.toFixed(1)}" y="${(y + 2.6).toFixed(1)}" text-anchor="middle" font-size="7.2" font-weight="600" fill="#2a1d05" font-family="-apple-system,Helvetica,sans-serif">${n}</text>`); }
+    const F = "-apple-system,Helvetica,Arial,sans-serif";
+    // Tachymeter bezel: speed = 3600 / elapsed seconds.
+    const tach = [60, 65, 70, 75, 80, 90, 100, 110, 120, 130, 150, 170, 200, 240, 300, 400, 500];
+    const bez = tach.map((v) => { const a = (3600 / v) * 6 % 360, [x, y] = P(a, 131); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="8.4" font-weight="600" fill="#f2f2f2" font-family="${F}" transform="rotate(${a} ${x.toFixed(1)} ${(y + 3).toFixed(1)})">${v}</text>`; }).join("");
+    const bezTicks = Array.from({ length: 120 }, (_, i) => { const sec = 7.2 + i * 0.44; return sec < 60 ? L(sec * 6, 139, i % 5 ? 136 : 134, `stroke="#e6e6e6" stroke-width="${i % 5 ? 0.5 : 0.9}"`) : ""; }).join("");
+    const track = [], idx = [];
+    for (let i = 0; i < 240; i++) { const big = i % 20 === 0, mid = i % 4 === 0; track.push(L(i * 1.5, 115, big ? 107 : mid ? 110 : 112.5, `stroke="#2a2a2a" stroke-width="${big ? 1.2 : mid ? 0.8 : 0.4}" opacity="${mid ? 0.85 : 0.5}"`)); }
+    const trackNums = Array.from({ length: 12 }, (_, i) => { const n = (i + 1) * 5, [x, y] = P(n * 6, 101); return n === 15 ? "" : `<text x="${x.toFixed(1)}" y="${(y + 2).toFixed(1)}" text-anchor="middle" font-size="5.4" fill="#3a3a3a" font-family="${F}">${n}</text>`; }).join("");
     for (let h = 0; h < 12; h++) {
-      if (h === 4) continue; // date window
-      const deg = h * 30, w = h === 0 ? 8 : 5.5, len = h === 0 ? 20 : 15;
-      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 107}" width="${w}" height="${len}" rx="1.2" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 105}" width="2.6" height="${len - 4}" rx=".8" fill="#f2f6e6" opacity=".92"/></g>`);
+      if (h === 3) continue; // day-date
+      const deg = h * 30, w = h % 3 === 0 ? 5.5 : 4.2;
+      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 96}" width="${w}" height="${h % 3 === 0 ? 17 : 14}" rx="1" fill="url(#gSteel)" stroke="#555" stroke-width=".4"/></g>`);
     }
     const sub = (x, y, id, labels, marks) => {
       const t = [];
-      for (let i = 0; i < marks; i++) { const a = (i * 360) / marks, rad = (a * Math.PI) / 180, big = labels.length && i % (marks / labels.length) === 0;
-        t.push(`<line x1="${x + 22 * Math.sin(rad)}" y1="${y - 22 * Math.cos(rad)}" x2="${x + (big ? 17.5 : 19.5) * Math.sin(rad)}" y2="${y - (big ? 17.5 : 19.5) * Math.cos(rad)}" stroke="#e9d38a" stroke-width="${big ? 1 : 0.5}"/>`); }
-      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${x + 12.5 * Math.sin(a)}" y="${y - 12.5 * Math.cos(a) + 2.2}" text-anchor="middle" font-size="5.6" fill="#e9d38a" font-family="-apple-system,Helvetica,sans-serif">${l}</text>`; }).join("");
-      return `<circle cx="${x}" cy="${y}" r="25" fill="url(#gSub)" stroke="url(#gIdx)" stroke-width="1.6"/>${Array.from({ length: 40 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${24 - i * 0.6}" fill="none" stroke="#000" stroke-width=".25" opacity=".18"/>`).join("")}${t.join("")}${lab}
-        <g id="${id}"><line x1="${x}" y1="${y + 5}" x2="${x}" y2="${y - 20}" stroke="url(#gIdx)" stroke-width="1.6" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.4" fill="url(#gIdx)"/></g>`;
+      for (let i = 0; i < marks; i++) { const rad = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
+        t.push(`<line x1="${(x + 24 * Math.sin(rad)).toFixed(2)}" y1="${(y - 24 * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? 19 : 21.5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? 19 : 21.5) * Math.cos(rad)).toFixed(2)}" stroke="#e8e8e8" stroke-width="${big ? 1 : 0.45}"/>`); }
+      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + 14 * Math.sin(a)).toFixed(1)}" y="${(y - 14 * Math.cos(a) + 2.2).toFixed(1)}" text-anchor="middle" font-size="5.8" font-weight="600" fill="#f0f0f0" font-family="${F}">${l}</text>`; }).join("");
+      return `<circle cx="${x}" cy="${y}" r="27.5" fill="url(#gSteel)"/><circle cx="${x}" cy="${y}" r="26" fill="url(#gSub)"/>
+        ${Array.from({ length: 22 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${25 - i * 1.1}" fill="none" stroke="#fff" stroke-width=".25" opacity=".07"/>`).join("")}${t.join("")}${lab}
+        <g id="${id}"><line x1="${x}" y1="${y + 5}" x2="${x}" y2="${y - 21}" stroke="#fafafa" stroke-width="1.6" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.6" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
     };
-    const [dx, dy] = P(120, 89);
     return `<svg viewBox="0 0 300 300" aria-label="Watch" id="watchSvg" style="cursor:pointer">
       <defs>
-        <linearGradient id="gCase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe7a1"/><stop offset=".25" stop-color="#c9982c"/><stop offset=".5" stop-color="#fff3c4"/><stop offset=".75" stop-color="#a87a1e"/><stop offset="1" stop-color="#e9c766"/></linearGradient>
-        <linearGradient id="gIdx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a87a1e"/><stop offset=".5" stop-color="#fff0b8"/><stop offset="1" stop-color="#b8862b"/></linearGradient>
-        <radialGradient id="gDial" cx=".5" cy=".38" r=".7"><stop offset="0" stop-color="#2f8a3c"/><stop offset=".55" stop-color="#145a22"/><stop offset="1" stop-color="#06260d"/></radialGradient>
-        <radialGradient id="gSub" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#1c6a2b"/><stop offset="1" stop-color="#0a3814"/></radialGradient>
-        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
-        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2.6" stdDeviation="2" flood-opacity=".7"/></filter>
+        <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdfdfd"/><stop offset=".3" stop-color="#9a9a9a"/><stop offset=".55" stop-color="#f4f4f4"/><stop offset=".8" stop-color="#8a8a8a"/><stop offset="1" stop-color="#e0e0e0"/></linearGradient>
+        <radialGradient id="gDial" cx=".5" cy=".42" r=".7"><stop offset="0" stop-color="#f7f7f7"/><stop offset=".6" stop-color="#d9d9d9"/><stop offset="1" stop-color="#a9a9a9"/></radialGradient>
+        <radialGradient id="gSub" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#3a3a3a"/><stop offset="1" stop-color="#0e0e0e"/></radialGradient>
+        <radialGradient id="gBez" cx=".5" cy=".5" r=".5"><stop offset=".85" stop-color="#1c1c1c"/><stop offset="1" stop-color="#050505"/></radialGradient>
+        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2.2" stdDeviation="1.6" flood-opacity=".55"/></filter>
+        <path id="tachArc" d="M ${P(6.5, 128)[0]} ${P(6.5, 128)[1]} A 128 128 0 0 1 ${P(38, 128)[0]} ${P(38, 128)[1]}"/>
       </defs>
-      <rect x="${c + 133}" y="${c - 74}" width="9" height="16" rx="2.5" fill="url(#gCase)" transform="rotate(45 ${c + 137} ${c - 66})" id="pushA"/>
-      <rect x="${c + 133}" y="${c + 58}" width="9" height="16" rx="2.5" fill="url(#gCase)" transform="rotate(-45 ${c + 137} ${c + 66})"/>
-      <rect x="${c + 140}" y="${c - 9}" width="9" height="18" rx="2.5" fill="url(#gCase)"/>
-      <circle cx="${c}" cy="${c}" r="146" fill="url(#gCase)"/>
-      <circle cx="${c}" cy="${c}" r="136" fill="url(#gCase)" transform="rotate(180 ${c} ${c})"/>
-      <circle cx="${c}" cy="${c}" r="133.5" fill="none" stroke="#6b4e12" stroke-width=".8"/>
-      ${nums.join("")}
-      <circle cx="${c}" cy="${c}" r="122" fill="url(#gDial)" stroke="#2b2111" stroke-width="1.6"/>
-      <g opacity=".1">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 122, 'stroke="#fff" stroke-width=".5"')).join("")}</g>
-      ${track.join("")}${idx.join("")}
-      <text x="${c}" y="${c - 66}" text-anchor="middle" font-family="Didot,'Bodoni 72',Georgia,serif" font-size="17" letter-spacing="5" fill="url(#gIdx)">LIFE</text>
-      <text x="${c}" y="${c - 54}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.6" letter-spacing="2.4" fill="#e9d38a">BLUMENFELD</text>
-      <text x="${c}" y="${c - 30}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.4" letter-spacing="2.2" fill="#e9d38a">CHRONOGRAPH</text>
-      <text x="${c}" y="${c + 92}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="4.6" letter-spacing="1.8" fill="#bfa45a">AUTOMATIC · EST. 2026</text>
-      ${sub(c - 55, c, "subS", ["60", "20", "40"], 60)}
-      ${sub(c + 55, c, "subM", ["30", "10", "20"], 30)}
-      ${sub(c, c + 55, "subH", ["12", "3", "6", "9"], 24)}
-      <g filter="url(#sh)" transform="rotate(30 ${dx} ${dy})"><rect x="${dx - 11}" y="${dy - 8}" width="22" height="16" rx="2" fill="#f6f1e4" stroke="url(#gIdx)" stroke-width="2"/>
-      <text id="wDate" x="${dx}" y="${dy + 4.6}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-weight="700" font-size="12" fill="#111">1</text></g>
-      <g id="hh" filter="url(#sh)"><path d="M${c - 4.6} ${c + 12} L${c - 4} ${c - 50} L${c} ${c - 62} L${c + 4} ${c - 50} L${c + 4.6} ${c + 12} Z" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.4}" y="${c - 52}" width="2.8" height="38" rx="1" fill="#f2f6e6" opacity=".92"/></g>
-      <g id="mm" filter="url(#sh)"><path d="M${c - 3.8} ${c + 16} L${c - 3} ${c - 90} L${c} ${c - 102} L${c + 3} ${c - 90} L${c + 3.8} ${c + 16} Z" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".5"/><rect x="${c - 1.2}" y="${c - 92}" width="2.4" height="68" rx=".9" fill="#f2f6e6" opacity=".92"/></g>
-      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 28}" x2="${c}" y2="${c - 118}" stroke="#ff6a3d" stroke-width="1.3" stroke-linecap="round"/><path d="M${c - 2.6} ${c - 104} L${c} ${c - 118} L${c + 2.6} ${c - 104} Z" fill="#ff6a3d"/><circle cx="${c}" cy="${c + 22}" r="4" fill="#ff6a3d"/></g>
-      <circle cx="${c}" cy="${c}" r="5.5" fill="url(#gIdx)" stroke="#5a420f" stroke-width=".8"/><circle cx="${c}" cy="${c}" r="1.8" fill="#ff6a3d"/>
+      <circle cx="${c}" cy="${c}" r="149" fill="url(#gSteel)"/>
+      <circle cx="${c}" cy="${c}" r="145" fill="url(#gBez)"/>
+      ${bezTicks}${bez}
+      <text font-size="6.4" font-weight="700" letter-spacing="1.1" fill="#f2f2f2" font-family="${F}"><textPath href="#tachArc">TACHYMETRE</textPath></text>
+      <circle cx="${c}" cy="${c}" r="121" fill="url(#gSteel)"/>
+      <circle cx="${c}" cy="${c}" r="118" fill="url(#gDial)"/>
+      <circle cx="${c}" cy="${c}" r="72" fill="#fff" opacity=".35"/>
+      <g opacity=".08">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 118, 'stroke="#000" stroke-width=".4"')).join("")}</g>
+      ${track.join("")}${trackNums}${idx.join("")}
+      ${sub(c, c - 52, "subM", ["30", "5", "10", "15", "20", "25"], 30)}
+      ${sub(c - 52, c, "subS", ["60", "15", "30", "45"], 60)}
+      ${sub(c, c + 52, "subH", ["12", "2", "4", "6", "8", "10"], 24)}
+      <text x="${c + 30}" y="${c - 14}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="1" fill="#1a1a1a" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
+      <text x="${c + 30}" y="${c - 7.5}" text-anchor="middle" font-size="3.4" letter-spacing="1" fill="#444" font-family="${F}">CHRONOGRAPH</text>
+      <g filter="url(#sh)"><rect x="${c + 52}" y="${c - 8}" width="40" height="16" rx="1.5" fill="url(#gSteel)"/>
+        <rect x="${c + 54}" y="${c - 6.4}" width="21" height="12.8" fill="#fff"/><rect x="${c + 76.5}" y="${c - 6.4}" width="13.5" height="12.8" fill="#fff"/>
+        <text id="wDay" x="${c + 64.5}" y="${c + 3.6}" text-anchor="middle" font-size="9" font-weight="700" fill="#111" font-family="${F}">MON</text>
+        <text id="wDate" x="${c + 83.2}" y="${c + 3.6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111" font-family="${F}">1</text></g>
+      <g id="hh" filter="url(#sh)"><path d="M${c - 4.4} ${c + 12} L${c - 3.6} ${c - 50} L${c} ${c - 60} L${c + 3.6} ${c - 50} L${c + 4.4} ${c + 12} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 50}" width="2.6" height="36" rx="1" fill="#fff"/></g>
+      <g id="mm" filter="url(#sh)"><path d="M${c - 3.6} ${c + 16} L${c - 2.8} ${c - 86} L${c} ${c - 98} L${c + 2.8} ${c - 86} L${c + 3.6} ${c + 16} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.1}" y="${c - 88}" width="2.2" height="64" rx=".8" fill="#fff"/></g>
+      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#f5f5f5" stroke-width="1.3" stroke-linecap="round"/><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#777" stroke-width=".35"/><circle cx="${c}" cy="${c + 20}" r="3.8" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>
+      <circle cx="${c}" cy="${c}" r="5.2" fill="url(#gSteel)" stroke="#555" stroke-width=".7"/><circle cx="${c}" cy="${c}" r="1.6" fill="#333"/>
       <ellipse cx="${c - 20}" cy="${c - 62}" rx="96" ry="58" fill="url(#gGlass)" transform="rotate(-18 ${c} ${c})"/>
     </svg>`;
   }
@@ -214,7 +216,7 @@
     if (chrono.run) { chrono.acc += now - chrono.start; chrono.run = false; } else { chrono.start = now; chrono.run = true; }
     if (navigator.vibrate) navigator.vibrate(10);
   });
-  const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric" });
+  const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric", weekday: "short" });
   const rot = (id, deg, x = 150, y = 150) => { const el = document.getElementById(id); if (el) el.setAttribute("transform", `rotate(${deg.toFixed(3)} ${x} ${y})`); };
   function tickWatch() {
     if (document.getElementById("hh")) {
@@ -222,11 +224,13 @@
       const beat = Math.floor(now.getMilliseconds() / 125) * 125;
       const s = +p.second + beat / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
       rot("hh", h * 30); rot("mm", m * 6);
-      rot("subS", s * 6, 95, 150);
+      rot("subS", s * 6, 98, 150);
       const cm = Math.floor(chronoMs() / 125) * 125 / 1000; // chrono seconds, in 1/8 beats
-      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 205, 150); rot("subH", ((cm / 3600) % 12) * 30, 150, 205);
+      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 150, 98); rot("subH", ((cm / 3600) % 12) * 30, 150, 202);
       const d = document.getElementById("wDate");
       if (d && d.textContent !== p.day) d.textContent = p.day;
+      const w = document.getElementById("wDay"), wd = String(p.weekday || "").toUpperCase();
+      if (w && w.textContent !== wd) w.textContent = wd;
     }
     requestAnimationFrame(tickWatch);
   }
