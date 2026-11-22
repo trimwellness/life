@@ -24,7 +24,7 @@
   }
 
   async function api(path, opts = {}) {
-    const r = await fetch("/api/" + path, {
+    const r = await fetch(path.startsWith("/") ? path : "/api/" + path, {
       method: opts.method || "GET",
       headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) },
       body: opts.body ? JSON.stringify(opts.body) : undefined,
@@ -107,6 +107,9 @@
       nav.className = "tabs";
       nav.innerHTML = `<div class="in"><span class="ind"></span>${TABS.map(([r, n, ic]) => `<a href="#${r}" data-tab="${r}">${svg(ic)}<span>${n}</span></a>`).join("")}</div>`;
       document.body.appendChild(nav);
+      const fab = document.createElement("button");
+      fab.className = "gfab"; fab.dataset.act = "gerald"; fab.setAttribute("aria-label", "Ask Gerald"); fab.innerHTML = "G";
+      document.body.appendChild(fab);
     }
     const r = route(), i = TABS.findIndex(([x]) => x === r);
     nav.querySelectorAll("a").forEach((a) => a.classList.toggle("on", a.dataset.tab === r));
@@ -287,6 +290,7 @@
         <div class="spot"></div>
         <div class="watch">${watchSVG()}</div>
         <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
+        <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
       <a class="lux" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
@@ -469,6 +473,43 @@
     return top("Photo Vault") + `<div class="card"><div style="font-weight:600">OneDrive folders</div><div class="sub">Coming next: once the Microsoft app registration is done, pick the OneDrive folders to show here and they’ll stay in sync.</div></div>`;
   }
 
+  // ---------- Gerald ----------
+  const chat = { msgs: [], busy: false };
+  const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
+  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-•]\s+(.*)$/gm, "<li>$1</li>").replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m.replace(/\n/g, "")}</ul>`).replace(/\n/g, "<br>");
+  function geraldHTML() {
+    return `<div class="g-head"><span class="gdot big">G</span><div class="grow"><div class="g-name">Gerald</div><div class="sub">Your assistant · sees everything in Life</div></div><button class="icon" data-act="close" style="font-size:26px">×</button></div>
+      <div class="g-log" id="glog">${chat.msgs.length ? chat.msgs.map((m) => `<div class="gm ${m.role}">${m.role === "assistant" ? md(m.content) : esc(m.content)}</div>`).join("") : `<div class="g-hello">Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, Jeff. What can I do for you?</div>`}
+      ${chat.busy ? `<div class="gm assistant typing"><i></i><i></i><i></i></div>` : ""}</div>
+      ${chat.msgs.length ? "" : `<div class="g-sugg">${SUGGEST.map((q) => `<button data-act="g-ask" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}
+      <form class="g-in" data-form="gerald"><input name="q" placeholder="Ask or tell Gerald…" autocomplete="off" ${chat.busy ? "disabled" : ""}><button class="btn" ${chat.busy ? "disabled" : ""}>Send</button></form>`;
+  }
+  function openGerald() {
+    let m = document.getElementById("gmodal");
+    if (!m) {
+      m = document.createElement("div");
+      m.className = "modal gmodal"; m.id = "gmodal";
+      m.innerHTML = `<div class="sheet gsheet"></div>`;
+      m.addEventListener("click", (e) => { if (e.target === m) m.remove(); });
+      document.body.appendChild(m);
+    }
+    m.firstChild.innerHTML = geraldHTML();
+    bindForms(m);
+    const log = document.getElementById("glog"); if (log) log.scrollTop = log.scrollHeight;
+  }
+  async function askGerald(q) {
+    q = String(q || "").trim();
+    if (!q || chat.busy) return;
+    chat.msgs.push({ role: "user", content: q }); chat.busy = true; openGerald();
+    try {
+      const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16) } });
+      chat.msgs.push({ role: "assistant", content: r.reply });
+      if (r.changed) { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; render(); }
+    } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
+    chat.busy = false;
+    if (document.getElementById("gmodal")) { openGerald(); document.querySelector("#gmodal input[name=q]")?.focus(); }
+  }
+
   // ---------- Bottom sheet ----------
   function sheet(html) {
     closeSheet();
@@ -491,7 +532,9 @@
     const find = (col) => D[col].find((x) => x.id === id);
     try {
       switch (act) {
-        case "close": closeSheet(); break;
+        case "close": closeSheet(); document.getElementById("gmodal")?.remove(); break;
+        case "gerald": openGerald(); setTimeout(() => document.querySelector("#gmodal input[name=q]")?.focus(), 350); break;
+        case "g-ask": askGerald(el.dataset.q); break;
         case "todo-toggle": { const t = find("todo"); await save("todo", { ...t, done: !t.done }); break; }
         case "todo-showdone": ui.todoShowDone = !ui.todoShowDone; render(); break;
         case "todo-edit": {
@@ -549,6 +592,7 @@
     if (btn) btn.disabled = true;
     try {
       switch (f.dataset.form) {
+        case "gerald": f.reset(); askGerald(v.q); break;
         case "todo-add": await save("todo", { text: v.text, due: v.due }); break;
         case "todo-save": { const t = D.todo.find((x) => x.id === id); await save("todo", { ...t, text: v.text, due: v.due, notes: v.notes }); closeSheet(); break; }
         case "wish-save": { const w = D.wish.find((x) => x.id === id) || {}; await save("wish", { ...w, id, ...v }); closeSheet(); break; }
