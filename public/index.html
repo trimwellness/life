@@ -378,13 +378,13 @@ body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
 /* Gun Vault hero */
 .gv-h1{position:relative;z-index:2}
 .top{position:relative;z-index:3}
-.gv-hero{position:relative;margin:calc(-64px - env(safe-area-inset-top) - 10px) -16px 0;padding-top:calc(env(safe-area-inset-top) + 50px);height:min(112vw,480px);overflow:hidden;z-index:0;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 calc(env(safe-area-inset-top) + 90px),#000 82%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 calc(env(safe-area-inset-top) + 90px),#000 82%,transparent 100%)}
-.gv-hero picture{display:block;height:100%}.gv-hero img{width:100%;height:100%;object-fit:cover;object-position:50% 100%;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);display:block;-webkit-user-select:none;user-select:none}
-.gv-hero::before{content:none}
-.gv-eb{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600}
-.gv-title{font:400 46px/1.05 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin-top:6px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
-.gv-hero-txt{position:relative;z-index:2;text-align:center;margin-top:-4px}
-.gv-hero-txt .hero-num{font-size:34px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
+.gv-hero{position:relative;margin:calc(-64px - env(safe-area-inset-top) - 10px) -16px 0;height:calc(min(100vw,720px) * .8 + env(safe-area-inset-top));overflow:hidden;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 85%,transparent);mask-image:linear-gradient(180deg,#000 85%,transparent)}
+.gv-hero picture{position:absolute;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top) + 4px)}.gv-hero img{width:100%;height:100%;object-fit:cover;object-position:56% 0%;display:block;-webkit-user-select:none;user-select:none}
+.gv-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#050505 0,#050505 env(safe-area-inset-top),rgba(5,5,5,0) calc(env(safe-area-inset-top) + 40px)),linear-gradient(0deg,rgba(5,5,5,.92) 0,rgba(5,5,5,.6) 70px,rgba(5,5,5,0) 40%);z-index:1;pointer-events:none}
+.gv-eb{font-size:9.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.gv-title{font:400 30px/1.05 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin-top:6px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
+.gv-hero-txt{position:absolute;left:18px;right:18px;bottom:22px;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.gv-hero-txt .hero-num{font-size:26px;margin:2px 0 0;text-align:right;text-shadow:0 4px 18px rgba(0,0,0,.8)}
 .gv-sum{margin-top:4px;padding:14px 16px}
 
 /* Calendar */
@@ -413,6 +413,14 @@ body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
 .cal-kind span,.cal-rem span{display:inline-block;padding:7px 12px;border-radius:999px;border:1px solid rgba(212,175,55,.3);font-size:13.5px;color:#cfc6b0;cursor:pointer}
 .cal-kind span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:1px}
 .cal-kind input:checked+span,.cal-rem input:checked+span{background:var(--goldg);color:#1a1306;border-color:transparent;font-weight:600}
+.cal-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.cal-2>div{min-width:0}
+form[data-form="ev-save"] input,form[data-form="ev-save"] select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block}
+form[data-form="ev-save"] input[type=date],form[data-form="ev-save"] input[type=time]{-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
+form[data-form="ev-save"] input[type=date]::-webkit-date-and-time-value,form[data-form="ev-save"] input[type=time]::-webkit-date-and-time-value{text-align:left}
+.cal-days{display:flex;justify-content:space-between;gap:6px;margin:10px 0 2px}
+.cal-days[hidden],.cal-until[hidden]{display:none}
+.cal-dw{flex:1}.cal-dw span{display:grid;place-items:center;width:100%;height:40px;padding:0;border-radius:50%;max-width:42px;margin:0 auto}
 .cal-dh{display:flex;gap:12px;align-items:stretch;margin-bottom:10px}
 .hc-row{display:flex;align-items:center;gap:10px;padding:7px 0}
 .hc-row+.hc-row{border-top:1px solid rgba(212,175,55,.1)}
@@ -425,6 +433,6 @@ body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=41"></script>
+<script src="/app.js?v=43"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { sendPush } from "./push.mjs";
 
 export const TZ = "America/New_York";
 export const KINDS = ["work", "med", "appt", "personal", "bill", "other"];
-export const REPEATS = ["none", "daily", "weekdays", "weekly", "biweekly", "monthly", "yearly"];
+export const REPEATS = ["none", "daily", "weekdays", "days", "weekly", "biweekly", "monthly", "yearly"];
 export const REMINDERS = [0, 5, 15, 30, 60, 120, 1440, 2880, 10080];
 const D = /^\d{4}-\d{2}-\d{2}$/, T = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -18,6 +18,7 @@ export function cleanEvent(b, old = {}) {
     time: T.test(b.time || "") ? b.time : "",
     end: T.test(b.end || "") ? b.end : "",
     repeat: REPEATS.includes(b.repeat) ? b.repeat : "none",
+    days: Array.isArray(b.days) ? [...new Set(b.days.map(Number).filter((x) => x >= 0 && x <= 6))].sort() : [],
     until: D.test(b.until || "") ? b.until : "",
     reminders: rem,
     location: clip(b.location, 200),
@@ -46,6 +47,7 @@ export function occursOn(ev, d) {
   switch (ev.repeat) {
     case "daily": return true;
     case "weekdays": { const w = dow(d); return w > 0 && w < 6; }
+    case "days": return (ev.days || []).includes(dow(d));
     case "weekly": return dow(d) === dow(ev.date);
     case "biweekly": return dow(d) === dow(ev.date) && Math.round((Date.parse(d) - Date.parse(ev.date)) / 864e5) % 14 === 0;
     case "monthly": return d.slice(8) === ev.date.slice(8);
@@ -95,6 +97,6 @@ export async function runReminders(s, now = Date.now()) {
 // Next N days as plain text lines, for Gerald.
 export function agendaLines(evs, days = 14, now = Date.now()) {
   const today = localDate(now), to = addDays(today, days), rows = [];
-  for (const ev of evs) for (const d of occurrences(ev, today, to)) rows.push([d + (ev.time || "00:00"), `- ${d}${ev.time ? " " + clock(ev.time) : " (all day)"}: ${ev.title} [${ev.kind}${ev.repeat !== "none" ? ", repeats " + ev.repeat : ""}]${ev.location ? " @ " + ev.location : ""}${(ev.done || []).includes(d) ? " — done" : ""} (event ${ev.id})`]);
+  for (const ev of evs) for (const d of occurrences(ev, today, to)) rows.push([d + (ev.time || "00:00"), `- ${d}${ev.time ? " " + clock(ev.time) : " (all day)"}: ${ev.title} [${ev.kind}${ev.repeat !== "none" ? ", repeats " + (ev.repeat === "days" ? "on " + (ev.days || []).map((x) => "Sun Mon Tue Wed Thu Fri Sat".split(" ")[x]).join("/") : ev.repeat) : ""}]${ev.location ? " @ " + ev.location : ""}${(ev.done || []).includes(d) ? " — done" : ""} (event ${ev.id})`]);
   return rows.sort((a, b) => a[0].localeCompare(b[0])).map((r) => r[1]);
 }

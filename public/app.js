@@ -689,8 +689,8 @@
     if (GV.data.error) return head + `<div class="empty">${esc(GV.data.error)}</div>`;
     const t = gvTotals(), d = GV.data, imp = GV.importing;
     const banner = imp ? `<div class="pv-prog"><i style="width:${imp.total ? Math.round(((imp.total - imp.left) / imp.total) * 100) : 4}%"></i><span>Bringing in your Safe Ledger${imp.total ? ` · ${imp.total - imp.left} of ${imp.total} files` : "…"}</span></div>` : "";
-    const sum = `<section class="gv-hero"><picture><source srcset="/gv-hero.webp?v=3" type="image/webp"><img src="/gv-hero.jpg?v=3" alt="" draggable="false"></picture>
-      </section><div class="gv-hero-txt"><div class="gv-eb">Safe Ledger</div><div class="gv-title">Gun Vault</div><div class="lbl" style="color:var(--gold);margin-top:14px">Collection value</div><div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div></div>
+    const sum = `<section class="gv-hero"><picture><source srcset="/gv-hero.webp?v=4" type="image/webp"><img src="/gv-hero.jpg?v=4" alt="" draggable="false"></picture><div class="gv-hero-txt"><div><div class="gv-eb">Safe Ledger</div><div class="gv-title">Gun Vault</div></div><div><div class="lbl" style="color:var(--gold);text-align:right;font-size:9.5px">Collection value</div><div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div></div></div>
+      </section>
       <div class="lux gv-sum" style="--i:0"><div class="cols" style="margin:0;padding:0;border:0"><div><div class="lbl">Firearms</div><div class="v">${d.firearms.length} · ${usd(t.firearms, false)}</div></div>
       <div><div class="lbl">NFA</div><div class="v">${d.nfa.length} · ${usd(t.nfa, false)}</div></div>
       <div><div class="lbl">Mags</div><div class="v">${magCount()} · ${usd(t.mags, false)}</div></div></div></div>`;
@@ -1079,7 +1079,7 @@
   // ---------- Calendar ----------
   const KIND = { work: ["Work", "#d4af37"], med: ["Medication", "#6fd58f"], appt: ["Appointment", "#8fb8ff"], personal: ["Personal", "#e7a6ff"], bill: ["Bill", "#ff9a6b"], other: ["Other", "#bdb39b"] };
   const REMS = [[0, "At time"], [15, "15 min"], [30, "30 min"], [60, "1 hour"], [120, "2 hours"], [1440, "24 hours"], [2880, "2 days"], [10080, "1 week"]];
-  const REP = [["none", "Doesn’t repeat"], ["daily", "Every day"], ["weekdays", "Weekdays"], ["weekly", "Every week"], ["biweekly", "Every 2 weeks"], ["monthly", "Every month"], ["yearly", "Every year"]];
+  const REP = [["none", "Doesn’t repeat"], ["daily", "Every day"], ["weekdays", "Weekdays"], ["days", "Specific days of the week"], ["weekly", "Every week"], ["biweekly", "Every 2 weeks"], ["monthly", "Every month"], ["yearly", "Every year"]];
   const CAL = { month: null, sel: null };
   const dkey = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   const dAdd = (d, n) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + n); return dkey(t); };
@@ -1089,6 +1089,7 @@
     switch (ev.repeat) {
       case "daily": return true;
       case "weekdays": { const w = dDow(d); return w > 0 && w < 6; }
+      case "days": return (ev.days || []).includes(dDow(d));
       case "weekly": return dDow(d) === dDow(ev.date);
       case "biweekly": return dDow(d) === dDow(ev.date) && Math.round((new Date(d + "T12:00:00") - new Date(ev.date + "T12:00:00")) / 864e5) % 14 === 0;
       case "monthly": return d.slice(8) === ev.date.slice(8);
@@ -1138,16 +1139,20 @@
     sheet(`<h2>${e.id ? "Edit" : "New"} event</h2><form data-form="ev-save" data-id="${e.id || ""}">
       <label>Title</label><input name="title" value="${esc(e.title)}" placeholder="e.g. District meeting, Take meds" required>
       <label>Type</label><div class="cal-kinds">${Object.entries(KIND).map(([k, [n, c]]) => `<label class="cal-kind"><input type="radio" name="kind" value="${k}" ${(e.kind || "work") === k ? "checked" : ""}><span style="--c:${c}">${n}</span></label>`).join("")}</div>
-      <div class="gv-efs" style="margin-top:6px"><div class="gv-ef" style="grid-column:1/-1"><label>Date</label><input type="date" name="date" value="${esc(e.date || d || todayKey())}" required></div>
-      <div class="gv-ef"><label>Start</label><input type="time" name="time" value="${esc(e.time || "")}"></div><div class="gv-ef"><label>End</label><input type="time" name="end" value="${esc(e.end || "")}"></div></div>
-      <div class="sub" style="margin:-2px 0 4px">Leave Start empty for an all-day item (reminders go at 9 AM).</div>
-      <div class="gv-efs"><div class="gv-ef"><label>Repeat</label><select name="repeat">${REP.map(([k, n]) => `<option value="${k}" ${(e.repeat || "none") === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>
-      <div class="gv-ef"><label>Until (optional)</label><input type="date" name="until" value="${esc(e.until || "")}"></div></div>
+      <label>${e.repeat && e.repeat !== "none" ? "Starts" : "Date"}</label><input type="date" name="date" value="${esc(e.date || d || todayKey())}" required>
+      <div class="cal-2"><div><label>Start time</label><input type="time" name="time" value="${esc(e.time || "")}"></div><div><label>End time</label><input type="time" name="end" value="${esc(e.end || "")}"></div></div>
+      <div class="sub" style="margin:4px 0 2px">Leave Start empty for an all-day item (reminders go at 9 AM).</div>
+      <label>Repeat</label><select name="repeat">${REP.map(([k, n]) => `<option value="${k}" ${(e.repeat || "none") === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <div class="cal-days" ${(e.repeat || "none") === "days" ? "" : "hidden"}>${["S", "M", "T", "W", "T", "F", "S"].map((n, i) => `<label class="cal-rem cal-dw"><input type="checkbox" name="dw" value="${i}" ${(e.days || [new Date((e.date || d || todayKey()) + "T12:00:00").getDay()]).includes(i) ? "checked" : ""}><span>${n}</span></label>`).join("")}</div>
+      <div class="cal-until" ${(e.repeat || "none") === "none" ? "hidden" : ""}><label>Ends (optional)</label><input type="date" name="until" value="${esc(e.until || "")}"></div>
       <label>Remind me</label><div class="cal-rems">${REMS.map(([v, n]) => `<label class="cal-rem"><input type="checkbox" name="rem" value="${v}" ${r.includes(v) ? "checked" : ""}><span>${n}</span></label>`).join("")}</div>
       <label>Location</label><input name="location" value="${esc(e.location || "")}">
       <label>Notes</label><textarea name="notes">${esc(e.notes || "")}</textarea>
       <div class="actions">${e.id ? `<button type="button" class="btn danger" data-act="ev-del" data-id="${e.id}">Delete</button>` : ""}<span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
-    document.querySelectorAll('form[data-form="ev-save"] [name=kind]').forEach((x) => x.addEventListener("change", () => { if (x.value === "med" && !e.id) { const f = x.form; f.repeat.value = "daily"; f.querySelectorAll("[name=rem]").forEach((c) => (c.checked = c.value === "0")); } }));
+    const F = document.querySelector('form[data-form="ev-save"]');
+    const sync = () => { F.querySelector(".cal-days").hidden = F.repeat.value !== "days"; F.querySelector(".cal-until").hidden = F.repeat.value === "none"; };
+    F.repeat.addEventListener("change", sync);
+    F.querySelectorAll("[name=kind]").forEach((x) => x.addEventListener("change", () => { if (x.value === "med" && !e.id) { F.repeat.value = "daily"; F.querySelectorAll("[name=rem]").forEach((c) => (c.checked = c.value === "0")); sync(); } }));
   }
   function evOpen(id, d) {
     const e = (D.events || []).find((x) => x.id === id); if (!e) return;
@@ -1155,7 +1160,7 @@
     const rem = (e.reminders || []).map((v) => (REMS.find(([x]) => x === v) || [, v + " min"])[1]).join(", ") || "None";
     sheet(`<div class="cal-dh"><span class="cal-bar" style="background:${kc}"></span><div><h2 style="margin:0">${esc(e.title)}</h2><div class="sub">${esc(kn)}</div></div></div>
       <div class="gv-kv"><span>When</span><b>${esc(dayLabel(d))} · ${clk(e.time)}${e.end ? "–" + clk(e.end) : ""}</b></div>
-      ${e.repeat !== "none" ? `<div class="gv-kv"><span>Repeats</span><b>${esc(REP.find(([k]) => k === e.repeat)[1])}${e.until ? " until " + esc(e.until) : ""}</b></div>` : ""}
+      ${e.repeat !== "none" ? `<div class="gv-kv"><span>Repeats</span><b>${esc(e.repeat === "days" ? "Every " + (e.days || []).map((x) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][x]).join(", ") : REP.find(([k]) => k === e.repeat)[1])}${e.until ? " until " + esc(e.until) : ""}</b></div>` : ""}
       <div class="gv-kv"><span>Reminders</span><b>${esc(rem)}</b></div>
       ${e.location ? `<div class="gv-kv"><span>Where</span><b><a href="https://maps.apple.com/?q=${encodeURIComponent(e.location)}" target="_blank" rel="noopener" style="color:var(--gold2)">${esc(e.location)}</a></b></div>` : ""}
       ${e.notes ? `<div class="gv-notes" style="margin-top:12px">${esc(e.notes)}</div>` : ""}
@@ -1327,7 +1332,7 @@
       switch (f.dataset.form) {
         case "gerald": f.reset(); askGerald(v.q); break;
         case "gv-save": await gvSubmit(f); break;
-        case "ev-save": { const fd = new FormData(f); const body = { title: v.title, kind: fd.get("kind") || "other", date: v.date, time: v.time, end: v.end, repeat: v.repeat, until: v.until, location: v.location, notes: v.notes, reminders: fd.getAll("rem").map(Number) };
+        case "ev-save": { const fd = new FormData(f); const body = { title: v.title, kind: fd.get("kind") || "other", date: v.date, time: v.time, end: v.end, repeat: v.repeat, days: fd.getAll("dw").map(Number), until: v.repeat === "none" ? "" : v.until, location: v.location, notes: v.notes, reminders: fd.getAll("rem").map(Number) };
           const old = f.dataset.id && D.events.find((x) => x.id === f.dataset.id); await save("events", { ...(old || {}), ...body, ...(old ? { id: old.id } : {}) }); closeSheet(); CAL.sel = body.date; CAL.month = body.date.slice(0, 7);
           if (typeof Notification !== "undefined" && Notification.permission !== "granted" && body.reminders.length) toast("Turn on reminders on the Calendar page to get alerts"); else toast("Saved"); break; }
         case "pw-create": case "pw-unlock": case "pw-save": case "pw-newmaster": await pwSubmit(f, v); break;
