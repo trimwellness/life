@@ -378,12 +378,12 @@ body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
 /* Gun Vault hero */
 .gv-h1{position:relative;z-index:2}
 .top{position:relative;z-index:3}
-.gv-hero{position:relative;margin:calc(-64px - env(safe-area-inset-top) - 10px) -16px 0;height:min(118vw,520px);overflow:hidden;z-index:0}
-.gv-hero img{position:absolute;right:-6%;top:calc(env(safe-area-inset-top) + 74px);height:calc(100% - env(safe-area-inset-top) - 74px);width:auto;max-width:none;display:block;-webkit-user-select:none;user-select:none;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 22%),linear-gradient(180deg,transparent 0,#000 8%,#000 80%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 22%),linear-gradient(180deg,transparent 0,#000 8%,#000 80%,transparent 100%);mask-composite:intersect}
-.gv-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,5,5,.7) 0%,rgba(5,5,5,0) 18%,rgba(5,5,5,0) 50%,rgba(5,5,5,.8) 80%,#050505 100%),linear-gradient(90deg,rgba(5,5,5,.55),rgba(5,5,5,0) 55%);z-index:1}
+.gv-hero{position:relative;margin:calc(-64px - env(safe-area-inset-top) - 10px) -16px 0;padding-top:calc(env(safe-area-inset-top) + 50px);height:min(112vw,480px);overflow:hidden;z-index:0;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 calc(env(safe-area-inset-top) + 90px),#000 82%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 calc(env(safe-area-inset-top) + 90px),#000 82%,transparent 100%)}
+.gv-hero picture{display:block;height:100%}.gv-hero img{width:100%;height:100%;object-fit:cover;object-position:50% 100%;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 18%,#000 82%,transparent 100%);display:block;-webkit-user-select:none;user-select:none}
+.gv-hero::before{content:none}
 .gv-eb{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600}
 .gv-title{font:400 46px/1.05 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin-top:6px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
-.gv-hero-txt{position:absolute;left:20px;bottom:18px;z-index:2}
+.gv-hero-txt{position:relative;z-index:2;text-align:center;margin-top:-4px}
 .gv-hero-txt .hero-num{font-size:34px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
 .gv-sum{margin-top:4px;padding:14px 16px}
 </style>
@@ -391,6 +391,6 @@ body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=39"></script>
+<script src="/app.js?v=40"></script>
 </body>
 </html>
