@@ -51,7 +51,7 @@
   // ---------- Data ----------
   async function boot() {
     if (!token) return renderLogin();
-    try { D = await api("all"); } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    try { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
     loadTrim(); loadMoney();
   }

@@ -17,3 +17,19 @@
   [headers.values]
     Cache-Control = "no-cache"
     Service-Worker-Allowed = "/"
+
+# Always check for a new page and script so phones never run an old copy.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/app.js"
+  [headers.values]
+    Cache-Control = "no-cache"
