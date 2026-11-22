@@ -147,65 +147,62 @@
 
   // ---------- Watch: original green-dial chronograph. Real Eastern time and date; small seconds at 9 sweep at
   // 8 beats a second; tap the watch to start/stop the chronograph, double-tap to reset (30-min counter at 3, 12-hour at 6).
+  // Line-drawing watch: thin dark-gold outlines on black, like a technical illustration. Centre (150, 220).
+  const WX = 150, WY = 220;
   function watchSVG() {
-    const c = 150, P = (a, r) => [c + r * Math.sin((a * Math.PI) / 180), c - r * Math.cos((a * Math.PI) / 180)];
-    const L = (a, r1, r2, st) => { const [x1, y1] = P(a, r1), [x2, y2] = P(a, r2); return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${st}/>`; };
-    const F = "-apple-system,Helvetica,Arial,sans-serif";
-    // Tachymeter bezel: speed = 3600 / elapsed seconds.
+    const c = WX, cy = WY, P = (a, r) => [c + r * Math.sin((a * Math.PI) / 180), cy - r * Math.cos((a * Math.PI) / 180)];
+    const L = (a, r1, r2, st = "") => { const [x1, y1] = P(a, r1), [x2, y2] = P(a, r2); return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${st}/>`; };
+    const F = "-apple-system,Helvetica,Arial,sans-serif", G = "#b38b3a", G2 = "#d9b45f", G3 = "#7d5f24";
+    // bracelet: three-row links running off the top and bottom
+    const links = (y0, y1) => { let o = `<path d="M88 ${y0} V${y1} M212 ${y0} V${y1} M122 ${y0} V${y1} M178 ${y0} V${y1}"/>`; for (let y = y0; y <= y1; y += 26) o += `<path d="M88 ${y} H122 M178 ${y} H212"/><path d="M122 ${y + 13} H178"/>`; return o; };
     const tach = [60, 65, 70, 75, 80, 90, 100, 110, 120, 130, 150, 170, 200, 240, 300, 400, 500];
-    const bez = tach.map((v) => { const a = (3600 / v) * 6 % 360, [x, y] = P(a, 131); return `<text x="${x.toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="middle" font-size="8.4" font-weight="600" fill="#e9d38a" font-family="${F}" transform="rotate(${a} ${x.toFixed(1)} ${(y + 3).toFixed(1)})">${v}</text>`; }).join("");
-    const bezTicks = Array.from({ length: 120 }, (_, i) => { const sec = 7.2 + i * 0.44; return sec < 60 ? L(sec * 6, 139, i % 5 ? 136 : 134, `stroke="#c9a54e" stroke-width="${i % 5 ? 0.5 : 0.9}"`) : ""; }).join("");
-    const track = [], idx = [];
-    for (let i = 0; i < 240; i++) { const big = i % 20 === 0, mid = i % 4 === 0; track.push(L(i * 1.5, 115, big ? 107 : mid ? 110 : 112.5, `stroke="#c9a54e" stroke-width="${big ? 1.1 : mid ? 0.7 : 0.35}" opacity="${mid ? 0.85 : 0.5}"`)); }
-    const trackNums = Array.from({ length: 12 }, (_, i) => { const n = (i + 1) * 5, [x, y] = P(n * 6, 101); return n === 15 ? "" : `<text x="${x.toFixed(1)}" y="${(y + 2).toFixed(1)}" text-anchor="middle" font-size="5.4" fill="#3a3a3a" font-family="${F}">${n}</text>`; }).join("");
-    for (let h = 0; h < 12; h++) {
-      if (h === 3) continue; // day-date
-      const deg = h * 30, w = h % 3 === 0 ? 3.6 : 2.8;
-      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 105}" width="${w}" height="${h % 3 === 0 ? 10 : 8}" rx=".8" fill="url(#gSteel)" stroke="#555" stroke-width=".35"/></g>`);
-    }
-    const R = 34; // subdial radius
+    const bez = tach.map((v) => { const a = ((3600 / v) * 6) % 360, [x, y] = P(a, 118.5); return `<text x="${x.toFixed(1)}" y="${(y + 2.6).toFixed(1)}" text-anchor="middle" font-size="7.4" fill="${G2}" stroke="none" font-family="${F}">${v}</text>`; }).join("");
+    const bezDots = tach.map((v) => { const [x, y] = P(((3600 / v) * 6) % 360, 111.5); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r=".9" fill="${G2}" stroke="none"/>`; }).join("");
+    const track = Array.from({ length: 240 }, (_, i) => L(i * 1.5, 94, i % 4 ? 90 : 87.5, `stroke-width="${i % 4 ? 0.35 : 0.6}"`)).join("");
+    const idx = [];
+    for (let h = 0; h < 12; h++) { if (h === 3) continue; const [x1, y1] = P(h * 30, 85), [x2, y2] = P(h * 30, h % 3 ? 74 : 70);
+      idx.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${G2}" stroke-width="${h % 3 ? 3.2 : 4}" stroke-linecap="butt"/>`); }
+    const R = 26;
     const sub = (x, y, id, labels, marks) => {
-      const t = [];
-      for (let i = 0; i < marks; i++) { const rad = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
-        t.push(`<line x1="${(x + (R - 2) * Math.sin(rad)).toFixed(2)}" y1="${(y - (R - 2) * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? R - 8 : R - 5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? R - 8 : R - 5) * Math.cos(rad)).toFixed(2)}" stroke="#d9bd6a" stroke-width="${big ? 1.1 : 0.5}"/>`); }
-      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 15) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 15) * Math.cos(a) + 2.6).toFixed(1)}" text-anchor="middle" font-size="7" font-weight="600" fill="#e9d38a" font-family="${F}">${l}</text>`; }).join("");
-      return `<circle cx="${x}" cy="${y}" r="${R + 1.8}" fill="url(#gSteel)"/><circle cx="${x}" cy="${y}" r="${R}" fill="url(#gSub)"/>
-        ${Array.from({ length: 28 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${R - 1 - i * 1.1}" fill="none" stroke="#fff" stroke-width=".25" opacity=".07"/>`).join("")}${t.join("")}${lab}
-        <g id="${id}"><line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y - (R - 4)}" stroke="#f6dd8c" stroke-width="1.8" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="3" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
+      let o = `<circle cx="${x}" cy="${y}" r="${R}" fill="#0b0a08"/>`;
+      for (let i = 0; i < marks; i++) { const a = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
+        o += `<line x1="${(x + R * Math.sin(a)).toFixed(2)}" y1="${(y - R * Math.cos(a)).toFixed(2)}" x2="${(x + (R - (big ? 4.5 : 2.5)) * Math.sin(a)).toFixed(2)}" y2="${(y - (R - (big ? 4.5 : 2.5)) * Math.cos(a)).toFixed(2)}" stroke-width="${big ? 0.8 : 0.35}"/>`; }
+      o += labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 11) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 11) * Math.cos(a) + 2.3).toFixed(1)}" text-anchor="middle" font-size="6.2" fill="${G2}" stroke="none" font-family="${F}">${l}</text>`; }).join("");
+      return o + `<g id="${id}"><line x1="${x}" y1="${y + 4}" x2="${x}" y2="${y - R + 5}" stroke="${G2}" stroke-width="1.3" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.6" fill="#0b0a08" stroke="${G2}" stroke-width=".9"/></g>`;
     };
-    return `<svg viewBox="0 0 300 300" aria-label="Watch" id="watchSvg" style="cursor:pointer">
-      <defs>
-        <linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe7a1"/><stop offset=".28" stop-color="#b8862b"/><stop offset=".55" stop-color="#fff3c4"/><stop offset=".8" stop-color="#9c7018"/><stop offset="1" stop-color="#e9c766"/></linearGradient>
-        <radialGradient id="gDial" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#262421"/><stop offset=".6" stop-color="#0e0d0b"/><stop offset="1" stop-color="#030303"/></radialGradient>
-        <radialGradient id="gSub" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#1d1b17"/><stop offset="1" stop-color="#050505"/></radialGradient>
-        <radialGradient id="gBez" cx=".5" cy=".5" r=".5"><stop offset=".85" stop-color="#1c1c1c"/><stop offset="1" stop-color="#050505"/></radialGradient>
-        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
-        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2.2" stdDeviation="1.6" flood-opacity=".55"/></filter>
-        <path id="tachArc" d="M ${P(6.5, 128)[0]} ${P(6.5, 128)[1]} A 128 128 0 0 1 ${P(38, 128)[0]} ${P(38, 128)[1]}"/>
-      </defs>
-      <circle cx="${c}" cy="${c}" r="149" fill="url(#gSteel)"/>
-      <circle cx="${c}" cy="${c}" r="145" fill="url(#gBez)"/>
-      ${bezTicks}${bez}
-      <text font-size="6.4" font-weight="700" letter-spacing="1.6" fill="#f6dd8c" font-family="${F}"><textPath href="#tachArc">BLUMENFELD</textPath></text>
-      <circle cx="${c}" cy="${c}" r="121" fill="url(#gSteel)"/>
-      <circle cx="${c}" cy="${c}" r="118" fill="url(#gDial)"/>
-      <circle cx="${c}" cy="${c}" r="72" fill="none" stroke="#d4af37" stroke-width=".5" opacity=".35"/>
-      <g opacity=".08">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 118, 'stroke="#fff" stroke-width=".35"')).join("")}</g>
-      ${track.join("")}${idx.join("")}
-      ${sub(c, c - 53, "subM", ["30", "5", "10", "15", "20", "25"], 30)}
-      ${sub(c - 53, c, "subS", ["60", "15", "30", "45"], 60)}
-      ${sub(c, c + 53, "subH", ["12", "2", "4", "6", "8", "10"], 24)}
-      <text x="${c + 34}" y="${c - 16}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="2" fill="url(#gSteel)" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
-      <text x="${c + 34}" y="${c - 9.5}" text-anchor="middle" font-size="3.4" letter-spacing="1.2" fill="#bfa45a" font-family="${F}">CHRONOGRAPH</text>
-      <g filter="url(#sh)"><rect x="${c + 50}" y="${c - 8}" width="40" height="16" rx="1.5" fill="url(#gSteel)"/>
-        <rect x="${c + 52}" y="${c - 6.4}" width="21" height="12.8" fill="#fff"/><rect x="${c + 74.5}" y="${c - 6.4}" width="13.5" height="12.8" fill="#fff"/>
-        <text id="wDay" x="${c + 62.5}" y="${c + 3.6}" text-anchor="middle" font-size="9" font-weight="700" fill="#111" font-family="${F}">MON</text>
-        <text id="wDate" x="${c + 81.2}" y="${c + 3.6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111" font-family="${F}">1</text></g>
-      <g id="hh" filter="url(#sh)"><path d="M${c - 4.4} ${c + 12} L${c - 3.6} ${c - 50} L${c} ${c - 60} L${c + 3.6} ${c - 50} L${c + 4.4} ${c + 12} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 50}" width="2.6" height="36" rx="1" fill="#f4f1e6"/></g>
-      <g id="mm" filter="url(#sh)"><path d="M${c - 3.6} ${c + 16} L${c - 2.8} ${c - 86} L${c} ${c - 98} L${c + 2.8} ${c - 86} L${c + 3.6} ${c + 16} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.1}" y="${c - 88}" width="2.2" height="64" rx=".8" fill="#fff"/></g>
-      <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#f6dd8c" stroke-width="1.2" stroke-linecap="round"/><circle cx="${c}" cy="${c + 20}" r="3.8" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>
-      <circle cx="${c}" cy="${c}" r="5.2" fill="url(#gSteel)" stroke="#555" stroke-width=".7"/><circle cx="${c}" cy="${c}" r="1.6" fill="#1a1306"/>
-      <ellipse cx="${c - 20}" cy="${c - 62}" rx="96" ry="58" fill="url(#gGlass)" transform="rotate(-18 ${c} ${c})"/>
+    const hand = (id, len, w) => `<g id="${id}"><path d="M${c - w} ${cy + 14} L${c - w * 0.75} ${cy - len + 14} L${c} ${cy - len} L${c + w * 0.75} ${cy - len + 14} L${c + w} ${cy + 14} Z" fill="rgba(217,180,95,.16)" stroke="${G2}" stroke-width="1.1" stroke-linejoin="round"/><line x1="${c}" y1="${cy - len + 16}" x2="${c}" y2="${cy - 12}" stroke="${G2}" stroke-width=".6"/></g>`;
+    return `<svg viewBox="0 0 300 440" aria-label="Watch" id="watchSvg" style="cursor:pointer">
+      <g fill="none" stroke="${G}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        ${links(-30, 92)}${links(348, 470)}
+        <path d="M88 92 C76 112 66 140 62 170 M212 92 C224 112 234 140 238 170 M88 348 C76 328 66 300 62 270 M212 348 C224 328 234 300 238 270"/>
+        <path d="M84 98 H216 M84 342 H216" stroke="${G3}"/>
+        <rect x="273" y="204" width="13" height="32" rx="3"/>${Array.from({ length: 7 }, (_, i) => `<line x1="${275 + i * 1.6}" y1="205" x2="${275 + i * 1.6}" y2="235" stroke-width=".4"/>`).join("")}
+        <g transform="rotate(-30 ${c} ${cy})"><rect x="${c + 128}" y="${cy - 9}" width="12" height="18" rx="2.5"/><line x1="${c + 124}" y1="${cy - 5}" x2="${c + 128}" y2="${cy - 5}"/><line x1="${c + 124}" y1="${cy + 5}" x2="${c + 128}" y2="${cy + 5}"/></g>
+        <g transform="rotate(30 ${c} ${cy})"><rect x="${c + 128}" y="${cy - 9}" width="12" height="18" rx="2.5"/><line x1="${c + 124}" y1="${cy - 5}" x2="${c + 128}" y2="${cy - 5}"/><line x1="${c + 124}" y1="${cy + 5}" x2="${c + 128}" y2="${cy + 5}"/></g>
+        <circle cx="${c}" cy="${cy}" r="128" fill="#0b0a08" stroke-width="1.2"/>
+        <circle cx="${c}" cy="${cy}" r="125.5" stroke="${G3}" stroke-width=".6"/>
+        <circle cx="${c}" cy="${cy}" r="108"/>
+        <circle cx="${c}" cy="${cy}" r="104" stroke="${G3}" stroke-width=".6"/>
+        ${bezDots}
+        <circle cx="${c}" cy="${cy}" r="98"/>
+        ${track}
+        <circle cx="${c}" cy="${cy}" r="86" stroke-width=".6"/>
+        ${idx.join("")}
+        ${sub(c, cy - 52, "subM", ["30", "10", "20"], 30)}
+        ${sub(c - 52, cy, "subS", ["60", "20", "40"], 60)}
+        ${sub(c, cy + 52, "subH", ["12", "3", "6", "9"], 24)}
+        <rect x="${c + 50}" y="${cy - 7.5}" width="22" height="15" rx="1"/><rect x="${c + 73}" y="${cy - 7.5}" width="14" height="15" rx="1"/>
+      </g>
+      ${bez}
+      <path id="tachArc" d="M ${P(9, 118.5)[0]} ${P(9, 118.5)[1]} A 118.5 118.5 0 0 1 ${P(38, 118.5)[0]} ${P(38, 118.5)[1]}" fill="none"/>
+      <text font-size="7" letter-spacing="1.5" fill="${G2}" font-family="${F}" dy="2.6"><textPath href="#tachArc">BLUMENFELD</textPath></text>
+      <text x="${c + 30}" y="${cy - 20}" text-anchor="middle" font-size="8" letter-spacing="2" fill="${G2}" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
+      <text x="${c + 30}" y="${cy - 13}" text-anchor="middle" font-size="3.6" letter-spacing="1.2" fill="${G}" font-family="${F}">CHRONOGRAPH</text>
+      <text id="wDay" x="${c + 61}" y="${cy + 3}" text-anchor="middle" font-size="7.5" fill="${G2}" font-family="${F}">MON</text>
+      <text id="wDate" x="${c + 80}" y="${cy + 3}" text-anchor="middle" font-size="8" fill="${G2}" font-family="${F}">1</text>
+      ${hand("hh", 60, 4.6)}${hand("mm", 92, 3.6)}
+      <g id="cs"><line x1="${c}" y1="${cy + 24}" x2="${c}" y2="${cy - 96}" stroke="${G2}" stroke-width="1" stroke-linecap="round"/><path d="M${c - 2.2} ${cy - 84} L${c} ${cy - 96} L${c + 2.2} ${cy - 84} Z" fill="${G2}"/><circle cx="${c}" cy="${cy + 18}" r="3.2" fill="#0b0a08" stroke="${G2}" stroke-width="1"/></g>
+      <circle cx="${c}" cy="${cy}" r="4.6" fill="#0b0a08" stroke="${G2}" stroke-width="1.2"/><circle cx="${c}" cy="${cy}" r="1.3" fill="${G2}"/>
     </svg>`;
   }
   // Chronograph: tap to start/stop, double-tap to reset. Kept for the session.
@@ -221,16 +218,16 @@
     if (navigator.vibrate) navigator.vibrate(10);
   });
   const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric", weekday: "short" });
-  const rot = (id, deg, x = 150, y = 150) => { const el = document.getElementById(id); if (el) el.setAttribute("transform", `rotate(${deg.toFixed(3)} ${x} ${y})`); };
+  const rot = (id, deg, x = WX, y = WY) => { const el = document.getElementById(id); if (el) el.setAttribute("transform", `rotate(${deg.toFixed(3)} ${x} ${y})`); };
   function tickWatch() {
     if (document.getElementById("hh")) {
       const now = new Date(), p = Object.fromEntries(NY.formatToParts(now).map((x) => [x.type, x.value]));
       const beat = Math.floor(now.getMilliseconds() / 125) * 125;
       const s = +p.second + beat / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
       rot("hh", h * 30); rot("mm", m * 6);
-      rot("subS", s * 6, 97, 150);
+      rot("subS", s * 6, WX - 52, WY);
       const cm = Math.floor(chronoMs() / 125) * 125 / 1000; // chrono seconds, in 1/8 beats
-      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 150, 97); rot("subH", ((cm / 3600) % 12) * 30, 150, 203);
+      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, WX, WY - 52); rot("subH", ((cm / 3600) % 12) * 30, WX, WY + 52);
       const d = document.getElementById("wDate");
       if (d && d.textContent !== p.day) d.textContent = p.day;
       const w = document.getElementById("wDay"), wd = String(p.weekday || "").toUpperCase();
