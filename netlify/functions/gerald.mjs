@@ -12,7 +12,7 @@ const $ = (n) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits
 const nowNY = () => new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
 const todayNY = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-function factSheet({ todo, wish, pkgs, trim, money, gv }) {
+function factSheet({ todo, wish, pkgs, trim, money, gv, pw }) {
   const out = [];
   const open = todo.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
   out.push(`## To-do (${open.length} open)`);
@@ -57,6 +57,13 @@ function factSheet({ todo, wish, pkgs, trim, money, gv }) {
     out.push(`- Spares: ${gv.spares.map((x) => x.name).join("; ")}`);
     out.push(`- Gear: ${gv.gear.map((x) => x.name).join("; ")}`);
   }
+  // Password logins: only names, usernames, websites and categories, sent by the phone while the vault is unlocked.
+  // Passwords never leave the phone.
+  if (pw === "locked") out.push("## Passwords\n- The password vault is locked on Jeff's phone. If he asks about a login, tell him to unlock Passwords in Life and ask again.");
+  else if (Array.isArray(pw)) {
+    out.push(`## Password logins (${pw.length}; passwords are NOT included and you never see them)`);
+    pw.forEach((x) => out.push(`- [login ${x.id}] ${x.t}${x.c ? ` · ${x.c}` : ""}${x.u ? ` · user ${x.u}` : ""}${x.h ? ` · ${x.h}` : ""}`));
+  }
   return out.join("\n");
 }
 
@@ -67,6 +74,7 @@ Rules:
 - Do arithmetic carefully when asked for totals (e.g. spending at a merchant); state the date range you covered. The transaction list may not reach far back.
 - Use the tools to change Life's lists when Jeff asks (add/complete to-dos, add wish-list items, track packages). Confirm what you did in one line. For anything outside these tools (moving money, editing Trim orders, the finance app), say you can't do that from here.
 - Don't give investment, tax or legal verdicts; give the facts he needs.
+- Passwords: you only see login names, usernames, websites and categories, never passwords. When Jeff asks about a login, answer with the username/site and add the marker [[login:ID]] (the login's id) so the app shows a button that opens it, where he can view or copy the password. Never ask Jeff to tell you a password.
 It is now ${nowNY()} (America/New_York). Today's date: ${todayNY()}.
 
 # Jeff's live data
@@ -114,6 +122,8 @@ export default async (req) => {
   console.log("gerald env", JSON.stringify({ base: has("ANTHROPIC_BASE_URL"), key: has("ANTHROPIC_API_KEY"), gw: has("NETLIFY_AI_GATEWAY_URL"), gwKey: has("NETLIFY_AI_GATEWAY_KEY") }));
 
   const b = await req.json().catch(() => ({}));
+  const cl = (v, n) => String(v ?? "").slice(0, n);
+  const pw = b.pw === "locked" ? "locked" : Array.isArray(b.pw) ? b.pw.slice(0, 3000).map((x) => ({ id: cl(x.id, 20).replace(/[^A-Za-z0-9_-]/g, ""), t: cl(x.t, 80), u: cl(x.u, 80), h: cl(x.h, 80), c: cl(x.c, 30) })) : null;
   const history = (Array.isArray(b.messages) ? b.messages : []).slice(-16)
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
     .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
@@ -136,7 +146,7 @@ export default async (req) => {
   let changed = false, reply = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
       if (!uses.length || r.stop_reason !== "tool_use") { reply = text; break; }

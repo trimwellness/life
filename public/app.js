@@ -62,7 +62,7 @@
     if (!token) return renderLogin();
     try { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
-    loadTrim(); loadMoney(); loadGV(); loadAlbums();
+    loadTrim(); loadMoney(); loadGV(); loadAlbums(); pwLoad();
   }
   async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "trim", "pkgs"].includes(route())) render(); }
   async function loadMoney() { try { money = await api("money"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } if (["", "money"].includes(route())) render(); }
@@ -856,7 +856,7 @@
   }
 
   // ---------- Passwords: encrypted on this phone with your master password; the server only stores ciphertext ----------
-  const PW = { key: null, vault: null, meta: null, q: "", reveal: {}, err: "", busy: false, timer: 0 };
+  const PW = { key: null, vault: null, meta: null, q: "", cat: "", reveal: {}, err: "", busy: false, timer: 0 };
   const PW_ITER = 600000;
   const b64e = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
   const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -905,20 +905,27 @@
         ${first ? `<input name="m2" type="password" autocomplete="off" placeholder="Type it again" required style="margin-top:8px">` : ""}
         <div class="err">${esc(PW.err)}</div><button class="btn" style="width:100%;margin-top:10px" ${PW.busy ? "disabled" : ""}>${PW.busy ? "Working…" : first ? "Create vault" : "Unlock"}</button></form></div>`;
     }
-    const q = PW.q.toLowerCase(), items = [...PW.vault.items].sort((a, b) => a.title.localeCompare(b.title)).filter((x) => !q || [x.title, x.user, x.url].join(" ").toLowerCase().includes(q));
-    return head + `<input class="pw-search" placeholder="Search ${PW.vault.items.length} logins" value="${esc(PW.q)}" data-pwsearch autocomplete="off">
-      ${items.length ? `<div class="list">${items.map((x) => `<div class="item pw-item" data-act="pw-open" data-id="${x.id}"><span class="pw-av">${esc((x.title || "?")[0].toUpperCase())}</span>
+    const q = PW.q.toLowerCase().trim();
+    const all = [...PW.vault.items].sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+    const items = all.filter((x) => (!PW.cat || (x.cat || "Other") === PW.cat) && (!q || [x.title, x.user, x.url, x.cat, x.notes].join(" ").toLowerCase().includes(q)));
+    const counts = {}; all.forEach((x) => (counts[x.cat || "Other"] = (counts[x.cat || "Other"] || 0) + 1));
+    const chips = `<div class="pv-chips"><button class="${!PW.cat ? "on" : ""}" data-act="pw-cat" data-id="">All ${all.length}</button>${PW_CATS.filter((c) => counts[c]).map((c) => `<button class="${PW.cat === c ? "on" : ""}" data-act="pw-cat" data-id="${esc(c)}">${esc(c)} ${counts[c]}</button>`).join("")}</div>`;
+    const rowH = (x) => `<div class="item pw-item" data-act="pw-open" data-id="${x.id}"><span class="pw-av">${esc((x.title || "?")[0].toUpperCase())}</span>
         <div class="grow"><div class="t">${esc(x.title)}</div><div class="sub">${esc(x.user || host(x.url) || "")}</div></div>
-        <button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="pass">Copy</button></div>`).join("")}</div>`
-        : `<div class="empty">${PW.vault.items.length ? "No matches." : "No logins yet. Tap + Add."}</div>`}
-      <label class="btn ghost" style="display:block;text-align:center;margin-top:16px">Import from Chrome or Apple (CSV)<input type="file" accept=".csv,text/csv,text/comma-separated-values" data-pwimport hidden></label>
+        <button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="pass">Copy</button></div>`;
+    const groups = PW_CATS.map((c) => [c, items.filter((x) => (x.cat || "Other") === c)]).filter(([, l]) => l.length);
+    const body = !items.length ? `<div class="empty">${all.length ? "No matches." : "No logins yet. Tap + Add."}</div>`
+      : q || PW.cat ? `<div class="list">${items.map(rowH).join("")}</div>`
+      : groups.map(([c, l]) => `<h3 class="pw-h">${esc(c)} <span>${l.length}</span></h3><div class="list">${l.map(rowH).join("")}</div>`).join("");
+    return head + `<input class="pw-search" type="search" placeholder="Search name, username, site…" value="${esc(PW.q)}" data-pwsearch autocomplete="off" autocapitalize="off">${chips}${body}
+      <label class="btn ghost" style="display:block;text-align:center;margin-top:16px;text-transform:none;letter-spacing:0;font-size:15px">Import from Chrome or Apple (CSV)<input type="file" accept=".csv,text/csv,text/comma-separated-values" data-pwimport hidden></label>
       <div class="sub" style="text-align:center;margin-top:14px">Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
   }
   const pwItem = (id) => PW.vault.items.find((x) => x.id === id);
   function pwOpen(x) {
     const r = PW.reveal[x.id];
     const row = (k, v, f, extra = "") => v ? `<div class="pw-row"><div class="grow"><div class="lbl">${k}</div><div class="pw-v ${f === "pass" ? "mono" : ""}">${esc(v)}</div></div>${extra}<button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="${f}">Copy</button></div>` : "";
-    sheet(`<h2>${esc(x.title)}</h2>
+    sheet(`<h2>${esc(x.title)}</h2><div class="sub" style="margin:-6px 0 6px">${esc(x.cat || "Other")}</div>
       ${row("Username", x.user, "user")}
       ${row("Password", r ? x.pass : "••••••••••", "pass", `<button class="btn ghost sm" data-act="pw-reveal" data-id="${x.id}">${r ? "Hide" : "Show"}</button>`)}
       ${x.url ? `<div class="pw-row"><div class="grow"><div class="lbl">Website</div><div class="pw-v">${esc(x.url)}</div></div><a class="btn ghost sm" href="${esc(/^https?:/i.test(x.url) ? x.url : "https://" + x.url)}" target="_blank" rel="noopener">Open</a></div>` : ""}
@@ -931,6 +938,7 @@
       <label>Username or email</label><input name="user" value="${esc(x.user)}" autocomplete="off" autocapitalize="off">
       <label>Password</label><div class="row"><input name="pass" value="${esc(x.pass)}" class="grow mono" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button type="button" class="btn ghost sm" data-act="pw-gen">Generate</button></div>
       <label>Website</label><input name="url" value="${esc(x.url)}" placeholder="chase.com" autocomplete="off" autocapitalize="off">
+      <label>Category</label><select name="cat"><option value="">Auto</option>${PW_CATS.map((c) => `<option ${x.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
       <label>Notes</label><textarea name="notes">${esc(x.notes)}</textarea>
       <div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
   }
@@ -955,13 +963,14 @@
           const key = await pwDerive(v.m, b64d(PW.meta.salt), PW.meta.iter);
           try { PW.vault = await pwDecrypt(key, PW.meta.data); } catch (_) { throw new Error("Wrong master password"); }
           PW.key = key;
+          const n = await pwAutoCats(); if (n) setTimeout(() => toast(`Sorted ${n} login${n === 1 ? "" : "s"} into categories`), 300);
         }
         pwTouch();
       } catch (e) { PW.key = null; PW.err = e.message; }
       PW.busy = false; render(); return;
     }
     if (kind === "pw-save") {
-      const id = f.dataset.id, item = { id: id || newPwId(), title: v.title.trim(), user: v.user.trim(), pass: v.pass, url: v.url.trim(), notes: v.notes, at: Date.now() };
+      const id = f.dataset.id, item = { id: id || newPwId(), title: v.title.trim(), user: v.user.trim(), pass: v.pass, url: v.url.trim(), notes: v.notes, at: Date.now() }; item.cat = v.cat || pwCatGuess(item);
       const i = PW.vault.items.findIndex((x) => x.id === id);
       i >= 0 ? (PW.vault.items[i] = item) : PW.vault.items.push(item);
       await pwPersist(); closeSheet(); render(); toast("Saved");
@@ -1004,7 +1013,8 @@
       const sig = [host(url) || title, user, pass].join("|");
       if (seen.has(sig)) { dup++; continue; }
       seen.add(sig);
-      PW.vault.items.push({ id: newPwId(), title, user, pass, url, notes: iX >= 0 ? r[iX] || "" : "", at: Date.now() });
+      const it = { id: newPwId(), title, user, pass, url, notes: iX >= 0 ? r[iX] || "" : "", at: Date.now() }; it.cat = pwCatGuess(it);
+      PW.vault.items.push(it);
       added++;
     }
     if (added) await pwPersist();
@@ -1014,12 +1024,32 @@
       <div class="actions"><span class="sp"></span><button class="btn" data-act="close">Done</button></div>`);
   }
   document.addEventListener("change", (e) => { if (e.target.matches("input[data-pwimport]")) { const f = e.target.files[0]; e.target.value = ""; if (f) pwImport(f).catch((x) => toast(x.message)); } });
+
+  // Categories: guessed from the site/name on this phone; you can change any one in Edit.
+  const PW_CATS = ["Banking & Money", "Shopping", "Email & Accounts", "Social", "Streaming & Media", "Work", "Bills & Utilities", "Auto", "Travel", "Health", "Government & Taxes", "Firearms & Outdoors", "Wi-Fi & Devices", "Other"];
+  const PW_RULES = [
+    ["Work", /meineke|tekmetric|autovitals|emig|driven|adp|paychex|gusto|indeed|slack|zoom|teams|workday|quickbooks|intuit|xero|bill\.com|autointegrate|silverrock|partstech|worldpac|napa|autozone|advance|oreilly|carquest|mitchell|alldata|identifix|prodemand|groupon|wickedfile|trim|twtracker/],
+    ["Firearms & Outdoors", /gun|firearm|ammo|silencer|suppressor|rugged|silencershop|palmetto|psa|brownells|midway|primary ?arms|opticsplanet|eurooptic|gunbroker|sportsman|outdoor|hunting|fishing|range|nra|uspsa|holosun|eotech|vortex|sig ?sauer|sigsauer|glock|kriss|danieldefense|aero ?precision|optics/],
+    ["Banking & Money", /bank|chase|wellsfargo|citi|capitalone|amex|americanexpress|discover|venmo|paypal|cash\.app|cashapp|zelle|fidelity|vanguard|schwab|robinhood|etrade|coinbase|sofi|ally|pnc|truist|m&t|mtb\.com|mandtbank|members1st|creditkarma|experian|equifax|transunion|synchrony|barclays|usaa|navyfed|credit ?union|mortgage|loan|plaid|stripe|square|acorns|marcus|lendingclub|affirm|klarna|afterpay|mint|ynab|rocketmoney/],
+    ["Streaming & Media", /netflix|hulu|disney|hbo|max\.com|peacock|paramount|youtube|spotify|pandora|siriusxm|audible|kindle|primevideo|appletv|espn|fubo|sling|directv|roku|twitch|crunchyroll|plex|nfl|nba|mlb|dazn|tidal|ticketmaster|stubhub|playstation|xbox|steam|epicgames|nintendo|ea\.com|fanduel|draftkings/],
+    ["Social", /facebook|instagram|twitter|x\.com|tiktok|snapchat|linkedin|reddit|pinterest|threads|discord|telegram|whatsapp|nextdoor|tumblr|bereal|youtube\.com\/account/],
+    ["Government & Taxes", /\.gov|irs|ssa|socialsecurity|turbotax|hrblock|taxact|freetaxusa|usps|uscis|state\.pa|pa\.gov|mypath|revenue|courts|voter|id\.me|login\.gov|atf|eforms/],
+    ["Health", /mychart|patient|health|medical|hospital|clinic|pharmacy|cvs|walgreens|rite ?aid|goodrx|labcorp|quest|upmc|geisinger|wellspan|pennstate ?health|dental|vision|optum|aetna|cigna|humana|bluecross|bcbs|highmark|capital ?blue|unitedhealth|hims|ro\.co|teladoc|fitbit|whoop|myfitnesspal|peloton|strava|oura|gym|planet ?fitness/],
+    ["Auto", /honda|toyota|ford|chevy|gm\.com|nissan|hyundai|kia|subaru|tesla|carfax|kbb|carvana|autotrader|cars\.com|penndot|dmv|tolls|ezpass|e-zpass|gasbuddy|sheetz|wawa|shell|exxon|bp\.com|carmax|onstar|myhonda|hondalink/],
+    ["Travel", /airbnb|vrbo|booking|expedia|hotels|marriott|hilton|hyatt|ihg|wyndham|choicehotels|delta|united|american ?air|aa\.com|southwest|jetblue|spirit|frontier|alaska ?air|uber|lyft|hertz|enterprise|avis|budget|tripadvisor|kayak|priceline|amtrak|tsa|global ?entry|cruise|carnival|royalcaribbean/],
+    ["Bills & Utilities", /t-?mobile|verizon|att\.com|at&t|comcast|xfinity|spectrum|ppl|met-?ed|firstenergy|pplelectric|ugi|columbia ?gas|water|sewer|electric|energy|gas company|waste|republic|insurance|geico|progressive|statefarm|allstate|libertymutual|nationwide|erie|travelers|lemonade|ring\.com|adt|simplisafe|vivint|starlink/],
+    ["Wi-Fi & Devices", /wi-?fi|router|netgear|eero|orbi|tp-?link|asus|linksys|camera|printer|hp\.com|epson|canon|sonos|alexa|echo|smartthings|nest|ecobee|govee|tesla ?app|myq|chamberlain|blink|wyze|arlo|192\.168|10\.0\./],
+    ["Email & Accounts", /google|gmail|outlook|hotmail|live\.com|microsoft|yahoo|aol|icloud|appleid|apple\.com|proton|zoho|dropbox|onedrive|box\.com|adobe|github|gitlab|netlify|anthropic|claude|openai|chatgpt|1password|lastpass|bitwarden|godaddy|namecheap|squarespace|wix|shopify|canva/],
+    ["Shopping", /amazon|walmart|target|costco|samsclub|ebay|etsy|bestbuy|homedepot|lowes|wayfair|shein|temu|aliexpress|kohls|macys|nordstrom|nike|adidas|ulta|sephora|chewy|instacart|doordash|ubereats|grubhub|kroger|giant|weis|wegmans|aldi|shop|store|apple\.com\/shop|qvc|zappos|oldnavy|gap\.com|carhartt|tractorsupply|cabelas|basspro|scheels/],
+  ];
+  const pwCatGuess = (x) => { const t = [x.title, x.url, host(x.url), x.notes].join(" ").toLowerCase(); return (PW_RULES.find(([, re]) => re.test(t)) || ["Other"])[0]; };
+  async function pwAutoCats() { let n = 0; for (const x of PW.vault.items) if (!x.cat) { x.cat = pwCatGuess(x); n++; } if (n) await pwPersist().catch((e) => toast(e.message)); return n; }
   const newPwId = () => b64e(crypto.getRandomValues(new Uint8Array(9))).replace(/[+/=]/g, "x");
 
   // ---------- Gerald ----------
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
-  const md = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-•]\s+(.*)$/gm, "<li>$1</li>").replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m.replace(/\n/g, "")}</ul>`).replace(/\n/g, "<br>");
+  const md = (s) => esc(s).replace(/\[\[login:([A-Za-z0-9_-]+)\]\]/g, (_, id) => `<button class="gv-link" data-act="pw-g" data-id="${id}">Open ${esc(PW.key ? pwItem(id)?.title || "login" : "login")} ›</button>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-•]\s+(.*)$/gm, "<li>$1</li>").replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m.replace(/\n/g, "")}</ul>`).replace(/\n/g, "<br>");
   function geraldHTML() {
     return `<div class="g-head"><span class="gdot big">G</span><div class="grow"><div class="g-name">Gerald</div><div class="sub">Your assistant · sees everything in Life</div></div><button class="icon" data-act="close" style="font-size:26px">×</button></div>
       <div class="g-log" id="glog">${chat.msgs.length ? chat.msgs.map((m) => `<div class="gm ${m.role}">${m.role === "assistant" ? md(m.content) : esc(m.content)}</div>`).join("") : `<div class="g-hello">Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, Jeff. What can I do for you?</div>`}
@@ -1045,7 +1075,8 @@
     if (!q || chat.busy) return;
     chat.msgs.push({ role: "user", content: q }); chat.busy = true; openGerald();
     try {
-      const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16) } });
+      const pw = PW.key ? PW.vault.items.map((x) => ({ id: x.id, t: x.title, u: x.user, h: host(x.url), c: x.cat || "" })) : PW.meta && !PW.meta.empty ? "locked" : null;
+      const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
       if (r.changed) { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; render(); }
     } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
@@ -1117,6 +1148,8 @@
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
         case "pw-lock": pwLock(); break;
+        case "pw-cat": PW.cat = PW.cat === id ? "" : id; render(); break;
+        case "pw-g": { if (!PW.key) { toast("Unlock Passwords first"); document.getElementById("gmodal")?.remove(); location.hash = "keys"; break; } const x = pwItem(id); if (x) pwOpen(x); else toast("That login isn’t here anymore"); break; }
         case "pw-new": pwForm(); break;
         case "pw-open": pwOpen(pwItem(id)); break;
         case "pw-edit": pwForm(pwItem(id)); break;
