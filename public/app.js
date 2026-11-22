@@ -910,7 +910,7 @@
     const items = all.filter((x) => (!PW.cat || (x.cat || "Other") === PW.cat) && (!q || [x.title, x.user, x.url, x.cat, x.notes].join(" ").toLowerCase().includes(q)));
     const counts = {}; all.forEach((x) => (counts[x.cat || "Other"] = (counts[x.cat || "Other"] || 0) + 1));
     const chips = `<div class="pv-chips"><button class="${!PW.cat ? "on" : ""}" data-act="pw-cat" data-id="">All ${all.length}</button>${PW_CATS.filter((c) => counts[c]).map((c) => `<button class="${PW.cat === c ? "on" : ""}" data-act="pw-cat" data-id="${esc(c)}">${esc(c)} ${counts[c]}</button>`).join("")}</div>`;
-    const rowH = (x) => `<div class="item pw-item" data-act="pw-open" data-id="${x.id}"><span class="pw-av">${esc((x.title || "?")[0].toUpperCase())}</span>
+    const rowH = (x) => `<div class="item pw-item" data-act="pw-open" data-id="${x.id}">${pwAv(x)}
         <div class="grow"><div class="t">${esc(x.title)}</div><div class="sub">${esc(x.user || host(x.url) || "")}</div></div>
         <button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="pass">Copy</button></div>`;
     const groups = PW_CATS.map((c) => [c, items.filter((x) => (x.cat || "Other") === c)]).filter(([, l]) => l.length);
@@ -925,7 +925,7 @@
   function pwOpen(x) {
     const r = PW.reveal[x.id];
     const row = (k, v, f, extra = "") => v ? `<div class="pw-row"><div class="grow"><div class="lbl">${k}</div><div class="pw-v ${f === "pass" ? "mono" : ""}">${esc(v)}</div></div>${extra}<button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="${f}">Copy</button></div>` : "";
-    sheet(`<h2>${esc(x.title)}</h2><div class="sub" style="margin:-6px 0 6px">${esc(x.cat || "Other")}</div>
+    sheet(`<div class="pw-dh">${pwAv(x)}<div><h2 style="margin:0">${esc(x.title)}</h2><div class="sub">${esc(host(x.url) || "")}</div></div></div><div class="sub" style="margin:2px 0 6px">${esc(x.cat || "Other")}</div>
       ${row("Username", x.user, "user")}
       ${row("Password", r ? x.pass : "••••••••••", "pass", `<button class="btn ghost sm" data-act="pw-reveal" data-id="${x.id}">${r ? "Hide" : "Show"}</button>`)}
       ${x.url ? `<div class="pw-row"><div class="grow"><div class="lbl">Website</div><div class="pw-v">${esc(x.url)}</div></div><a class="btn ghost sm" href="${esc(/^https?:/i.test(x.url) ? x.url : "https://" + x.url)}" target="_blank" rel="noopener">Open</a></div>` : ""}
@@ -963,7 +963,8 @@
           const key = await pwDerive(v.m, b64d(PW.meta.salt), PW.meta.iter);
           try { PW.vault = await pwDecrypt(key, PW.meta.data); } catch (_) { throw new Error("Wrong master password"); }
           PW.key = key;
-          const n = await pwAutoCats(); if (n) setTimeout(() => toast(`Sorted ${n} login${n === 1 ? "" : "s"} into categories`), 300);
+          const nn = await pwNames(); if (nn) setTimeout(() => toast(`Renamed ${nn} login${nn === 1 ? "" : "s"}`), 2600);
+          const n = await pwAutoCats(nn > 0); if (n) setTimeout(() => toast(`Sorted ${n} login${n === 1 ? "" : "s"} into categories`), 300);
         }
         pwTouch();
       } catch (e) { PW.key = null; PW.err = e.message; }
@@ -1009,7 +1010,7 @@
     for (const r of rows.slice(1)) {
       const url = (r[iU] || "").trim(), pass = r[iP] || "", user = (r[iN] || "").trim();
       if (!pass && !user) continue;
-      const title = ((iT >= 0 && r[iT]) || host(url) || "Login").trim().replace(/^www\./, "");
+      const raw = ((iT >= 0 && r[iT]) || "").trim(), title = !raw || looksLikeHost(raw) ? brandName(url || raw) : raw;
       const sig = [host(url) || title, user, pass].join("|");
       if (seen.has(sig)) { dup++; continue; }
       seen.add(sig);
@@ -1024,6 +1025,22 @@
       <div class="actions"><span class="sp"></span><button class="btn" data-act="close">Done</button></div>`);
   }
   document.addEventListener("change", (e) => { if (e.target.matches("input[data-pwimport]")) { const f = e.target.files[0]; e.target.value = ""; if (f) pwImport(f).catch((x) => toast(x.message)); } });
+
+
+  // Friendly names and logos from each login's website: identity.walmart.com → "Walmart".
+  const BRANDS = { tmobile: "T-Mobile", "t-mobile": "T-Mobile", paypal: "PayPal", youtube: "YouTube", linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", ebay: "eBay", icloud: "iCloud", appleid: "Apple ID", apple: "Apple", hbomax: "HBO Max", max: "Max", att: "AT&T", usaa: "USAA", irs: "IRS", ssa: "Social Security", usps: "USPS", ups: "UPS", fedex: "FedEx", dhl: "DHL", aa: "American Airlines", homedepot: "Home Depot", bestbuy: "Best Buy", lowes: "Lowe's", samsclub: "Sam's Club", capitalone: "Capital One", wellsfargo: "Wells Fargo", bankofamerica: "Bank of America", americanexpress: "American Express", amex: "American Express", chase: "Chase", citi: "Citi", creditkarma: "Credit Karma", cashapp: "Cash App", doordash: "DoorDash", ubereats: "Uber Eats", grubhub: "Grubhub", tekmetric: "Tekmetric", autovitals: "AutoVitals", autozone: "AutoZone", oreillyauto: "O'Reilly", advanceautoparts: "Advance Auto Parts", napaonline: "NAPA", partstech: "PartsTech", silencershop: "Silencer Shop", gunbroker: "GunBroker", primaryarms: "Primary Arms", basspro: "Bass Pro", sigsauer: "SIG Sauer", eotechinc: "EOTech", danieldefense: "Daniel Defense", palmettostatearmory: "Palmetto State Armory", mychart: "MyChart", myhonda: "MyHonda", hondalink: "HondaLink", ezpass: "E-ZPass", e_zpass: "E-ZPass", ppl: "PPL", pplelectric: "PPL Electric", metlife: "MetLife", geico: "GEICO", statefarm: "State Farm", libertymutual: "Liberty Mutual", progressive: "Progressive", turbotax: "TurboTax", hrblock: "H&R Block", freetaxusa: "FreeTaxUSA", idme: "ID.me", "id": "ID.me", github: "GitHub", gitlab: "GitLab", openai: "OpenAI", chatgpt: "ChatGPT", claude: "Claude", netlify: "Netlify", godaddy: "GoDaddy", hulu: "Hulu", espn: "ESPN", nfl: "NFL", nba: "NBA", mlb: "MLB", siriusxm: "SiriusXM", playstation: "PlayStation", xbox: "Xbox", draftkings: "DraftKings", fanduel: "FanDuel", airbnb: "Airbnb", vrbo: "Vrbo", tripadvisor: "Tripadvisor", walmart: "Walmart", amazon: "Amazon", target: "Target", costco: "Costco", netflix: "Netflix", spotify: "Spotify", disneyplus: "Disney+", paramountplus: "Paramount+", peacocktv: "Peacock", primevideo: "Prime Video", microsoft: "Microsoft", live: "Microsoft", outlook: "Outlook", office: "Microsoft 365", google: "Google", gmail: "Gmail", yahoo: "Yahoo", aol: "AOL", dropbox: "Dropbox", adobe: "Adobe", canva: "Canva", shopify: "Shopify", squarespace: "Squarespace", venmo: "Venmo", zelle: "Zelle", sofi: "SoFi", robinhood: "Robinhood", coinbase: "Coinbase", fidelity: "Fidelity", vanguard: "Vanguard", schwab: "Charles Schwab", etrade: "E*TRADE", xfinity: "Xfinity", verizon: "Verizon", comcast: "Comcast", ring: "Ring", adt: "ADT", cvs: "CVS", walgreens: "Walgreens", goodrx: "GoodRx", myfitnesspal: "MyFitnessPal", x: "X", twitter: "X", reddit: "Reddit", pinterest: "Pinterest", snapchat: "Snapchat", discord: "Discord", whatsapp: "WhatsApp", nextdoor: "Nextdoor", indeed: "Indeed", adp: "ADP", paychex: "Paychex", gusto: "Gusto", quickbooks: "QuickBooks", intuit: "Intuit", groupon: "Groupon", ticketmaster: "Ticketmaster", stubhub: "StubHub", uber: "Uber", lyft: "Lyft", delta: "Delta", united: "United", southwest: "Southwest", jetblue: "JetBlue", marriott: "Marriott", hilton: "Hilton", hyatt: "Hyatt", ihg: "IHG", expedia: "Expedia", booking: "Booking.com", kayak: "Kayak", carfax: "Carfax", carvana: "Carvana", kbb: "Kelley Blue Book", sheetz: "Sheetz", wawa: "Wawa", tractorsupply: "Tractor Supply", cabelas: "Cabela's", chewy: "Chewy", etsy: "Etsy", temu: "Temu", shein: "SHEIN", kohls: "Kohl's", macys: "Macy's", nike: "Nike", ulta: "Ulta", sephora: "Sephora", instacart: "Instacart", weis: "Weis", giantfoodstores: "Giant", wegmans: "Wegmans", aldi: "ALDI", starlink: "Starlink", eero: "eero", netgear: "NETGEAR", tplink: "TP-Link", asus: "ASUS", sonos: "Sonos", ecobee: "ecobee", wyze: "Wyze", blink: "Blink", arlo: "Arlo", myq: "myQ" };
+  const SLD = /^(co|com|net|org|gov|edu|ac)\.[a-z]{2}$/;
+  function regDomain(h) { const p = (h || "").toLowerCase().split(".").filter(Boolean); if (p.length <= 2) return p.join("."); const last2 = p.slice(-2).join("."); return SLD.test(last2) ? p.slice(-3).join(".") : last2; }
+  const looksLikeHost = (t) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test((t || "").trim()) || /^https?:\/\//i.test(t || "");
+  function brandName(urlOrHost) {
+    const h = host(urlOrHost) || String(urlOrHost || "").toLowerCase(), d = regDomain(h), label = d.split(".")[0] || "";
+    if (/^\d+$/.test(label) || !label) return h || "Login";
+    if (h.endsWith(".gov") && h.includes("pa.gov")) return "PA.gov";
+    return BRANDS[label] || BRANDS[label.replace(/-/g, "")] || label.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+  }
+  const logoDomain = (x) => regDomain(host(x.url) || (looksLikeHost(x.title) ? host(x.title) : ""));
+  const pwAv = (x) => { const d = logoDomain(x), L = esc((x.title || "?")[0].toUpperCase()); return d ? `<span class="pw-av logo"><img src="/favicon/${encodeURIComponent(d)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('logo');this.replaceWith(document.createTextNode('${L}'))"></span>` : `<span class="pw-av">${L}</span>`; };
+  async function pwNames() { let n = 0; for (const x of PW.vault.items) if (looksLikeHost(x.title) || !x.title) { const b = brandName(x.url || x.title); if (b && b !== x.title) { x.title = b; n++; } } return n; }
 
   // Categories: guessed from the site/name on this phone; you can change any one in Edit.
   const PW_CATS = ["Banking & Money", "Shopping", "Email & Accounts", "Social", "Streaming & Media", "Work", "Bills & Utilities", "Auto", "Travel", "Health", "Government & Taxes", "Firearms & Outdoors", "Wi-Fi & Devices", "Other"];
@@ -1043,7 +1060,7 @@
     ["Shopping", /amazon|walmart|target|costco|samsclub|ebay|etsy|bestbuy|homedepot|lowes|wayfair|shein|temu|aliexpress|kohls|macys|nordstrom|nike|adidas|ulta|sephora|chewy|instacart|doordash|ubereats|grubhub|kroger|giant|weis|wegmans|aldi|shop|store|apple\.com\/shop|qvc|zappos|oldnavy|gap\.com|carhartt|tractorsupply|cabelas|basspro|scheels/],
   ];
   const pwCatGuess = (x) => { const t = [x.title, x.url, host(x.url), x.notes].join(" ").toLowerCase(); return (PW_RULES.find(([, re]) => re.test(t)) || ["Other"])[0]; };
-  async function pwAutoCats() { let n = 0; for (const x of PW.vault.items) if (!x.cat) { x.cat = pwCatGuess(x); n++; } if (n) await pwPersist().catch((e) => toast(e.message)); return n; }
+  async function pwAutoCats(force) { let n = 0; for (const x of PW.vault.items) if (!x.cat) { x.cat = pwCatGuess(x); n++; } if (n || force) await pwPersist().catch((e) => toast(e.message)); return n; }
   const newPwId = () => b64e(crypto.getRandomValues(new Uint8Array(9))).replace(/[+/=]/g, "x");
 
   // ---------- Gerald ----------
