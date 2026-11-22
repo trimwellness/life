@@ -164,13 +164,13 @@
       idx.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${G2}" stroke-width="${h % 3 ? 3.2 : 4}" stroke-linecap="butt"/>`); }
     const R = 26;
     const sub = (x, y, id, labels, marks) => {
-      let o = `<circle cx="${x}" cy="${y}" r="${R}" fill="#0b0a08"/>`;
+      let o = `<circle cx="${x}" cy="${y}" r="${R}" fill="none"/>`;
       for (let i = 0; i < marks; i++) { const a = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
         o += `<line x1="${(x + R * Math.sin(a)).toFixed(2)}" y1="${(y - R * Math.cos(a)).toFixed(2)}" x2="${(x + (R - (big ? 4.5 : 2.5)) * Math.sin(a)).toFixed(2)}" y2="${(y - (R - (big ? 4.5 : 2.5)) * Math.cos(a)).toFixed(2)}" stroke-width="${big ? 0.8 : 0.35}"/>`; }
       o += labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 11) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 11) * Math.cos(a) + 2.3).toFixed(1)}" text-anchor="middle" font-size="6.2" fill="${G2}" stroke="none" font-family="${F}">${l}</text>`; }).join("");
-      return o + `<g id="${id}"><line x1="${x}" y1="${y + 4}" x2="${x}" y2="${y - R + 5}" stroke="${G2}" stroke-width="1.3" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.6" fill="#0b0a08" stroke="${G2}" stroke-width=".9"/></g>`;
+      return o + `<g id="${id}"><line x1="${x}" y1="${y + 4}" x2="${x}" y2="${y - R + 5}" stroke="${G2}" stroke-width="1.3" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.6" fill="none" stroke="${G2}" stroke-width=".9"/></g>`;
     };
-    const hand = (id, len, w) => `<g id="${id}"><path d="M${c - w} ${cy + 14} L${c - w * 0.75} ${cy - len + 14} L${c} ${cy - len} L${c + w * 0.75} ${cy - len + 14} L${c + w} ${cy + 14} Z" fill="rgba(217,180,95,.16)" stroke="${G2}" stroke-width="1.1" stroke-linejoin="round"/><line x1="${c}" y1="${cy - len + 16}" x2="${c}" y2="${cy - 12}" stroke="${G2}" stroke-width=".6"/></g>`;
+    const hand = (id, len, w) => `<g id="${id}"><path d="M${c - w} ${cy + 14} L${c - w * 0.75} ${cy - len + 14} L${c} ${cy - len} L${c + w * 0.75} ${cy - len + 14} L${c + w} ${cy + 14} Z" fill="none" stroke="${G2}" stroke-width="1.1" stroke-linejoin="round"/><line x1="${c}" y1="${cy - len + 16}" x2="${c}" y2="${cy - 12}" stroke="${G2}" stroke-width=".6"/></g>`;
     return `<svg viewBox="0 0 300 440" aria-label="Watch" id="watchSvg" style="cursor:pointer">
       <defs><linearGradient id="braceFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="440"><stop offset="0" stop-color="${G}" stop-opacity="0"/><stop offset=".19" stop-color="${G}"/><stop offset=".81" stop-color="${G}"/><stop offset="1" stop-color="${G}" stop-opacity="0"/></linearGradient></defs>
       <g fill="none" stroke="${G}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -180,7 +180,7 @@
         <rect x="273" y="204" width="13" height="32" rx="3"/>${Array.from({ length: 7 }, (_, i) => `<line x1="${275 + i * 1.6}" y1="205" x2="${275 + i * 1.6}" y2="235" stroke-width=".4"/>`).join("")}
         <g transform="rotate(-30 ${c} ${cy})"><rect x="${c + 128}" y="${cy - 9}" width="12" height="18" rx="2.5"/><line x1="${c + 124}" y1="${cy - 5}" x2="${c + 128}" y2="${cy - 5}"/><line x1="${c + 124}" y1="${cy + 5}" x2="${c + 128}" y2="${cy + 5}"/></g>
         <g transform="rotate(30 ${c} ${cy})"><rect x="${c + 128}" y="${cy - 9}" width="12" height="18" rx="2.5"/><line x1="${c + 124}" y1="${cy - 5}" x2="${c + 128}" y2="${cy - 5}"/><line x1="${c + 124}" y1="${cy + 5}" x2="${c + 128}" y2="${cy + 5}"/></g>
-        <circle cx="${c}" cy="${cy}" r="128" fill="#0b0a08" stroke-width="1.2"/>
+        <circle cx="${c}" cy="${cy}" r="128" fill="none" stroke-width="1.2"/>
         <circle cx="${c}" cy="${cy}" r="125.5" stroke="${G3}" stroke-width=".6"/>
         <circle cx="${c}" cy="${cy}" r="108"/>
         <circle cx="${c}" cy="${cy}" r="104" stroke="${G3}" stroke-width=".6"/>
@@ -200,8 +200,8 @@
       <text id="wDay" x="${c + 61}" y="${cy + 3}" text-anchor="middle" font-size="7.5" fill="${G2}" font-family="${F}">MON</text>
       <text id="wDate" x="${c + 80}" y="${cy + 3}" text-anchor="middle" font-size="8" fill="${G2}" font-family="${F}">1</text>
       ${hand("hh", 60, 4.6)}${hand("mm", 92, 3.6)}
-      <g id="cs"><line x1="${c}" y1="${cy + 24}" x2="${c}" y2="${cy - 96}" stroke="${G2}" stroke-width="1" stroke-linecap="round"/><path d="M${c - 2.2} ${cy - 84} L${c} ${cy - 96} L${c + 2.2} ${cy - 84} Z" fill="${G2}"/><circle cx="${c}" cy="${cy + 18}" r="3.2" fill="#0b0a08" stroke="${G2}" stroke-width="1"/></g>
-      <circle cx="${c}" cy="${cy}" r="4.6" fill="#0b0a08" stroke="${G2}" stroke-width="1.2"/><circle cx="${c}" cy="${cy}" r="1.3" fill="${G2}"/>
+      <g id="cs"><line x1="${c}" y1="${cy + 24}" x2="${c}" y2="${cy - 96}" stroke="${G2}" stroke-width="1" stroke-linecap="round"/><path d="M${c - 2.2} ${cy - 84} L${c} ${cy - 96} L${c + 2.2} ${cy - 84} Z" fill="${G2}"/><circle cx="${c}" cy="${cy + 18}" r="3.2" fill="none" stroke="${G2}" stroke-width="1"/></g>
+      <circle cx="${c}" cy="${cy}" r="4.6" fill="none" stroke="${G2}" stroke-width="1.2"/><circle cx="${c}" cy="${cy}" r="1.3" fill="${G2}"/>
     </svg>`;
   }
   // Chronograph: tap to start/stop, double-tap to reset. Kept for the session.
