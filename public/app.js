@@ -172,8 +172,9 @@
     };
     const hand = (id, len, w) => `<g id="${id}"><path d="M${c - w} ${cy + 14} L${c - w * 0.75} ${cy - len + 14} L${c} ${cy - len} L${c + w * 0.75} ${cy - len + 14} L${c + w} ${cy + 14} Z" fill="rgba(217,180,95,.16)" stroke="${G2}" stroke-width="1.1" stroke-linejoin="round"/><line x1="${c}" y1="${cy - len + 16}" x2="${c}" y2="${cy - 12}" stroke="${G2}" stroke-width=".6"/></g>`;
     return `<svg viewBox="0 0 300 440" aria-label="Watch" id="watchSvg" style="cursor:pointer">
+      <defs><linearGradient id="braceFade" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="440"><stop offset="0" stop-color="${G}" stop-opacity="0"/><stop offset=".19" stop-color="${G}"/><stop offset=".81" stop-color="${G}"/><stop offset="1" stop-color="${G}" stop-opacity="0"/></linearGradient></defs>
       <g fill="none" stroke="${G}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-        ${links(-30, 92)}${links(348, 470)}
+        <g stroke="url(#braceFade)">${links(0, 92)}${links(348, 440)}</g>
         <path d="M88 92 C76 112 66 140 62 170 M212 92 C224 112 234 140 238 170 M88 348 C76 328 66 300 62 270 M212 348 C224 328 234 300 238 270"/>
         <path d="M84 98 H216 M84 342 H216" stroke="${G3}"/>
         <rect x="273" y="204" width="13" height="32" rx="3"/>${Array.from({ length: 7 }, (_, i) => `<line x1="${275 + i * 1.6}" y1="205" x2="${275 + i * 1.6}" y2="235" stroke-width=".4"/>`).join("")}
@@ -196,8 +197,6 @@
       ${bez}
       <path id="tachArc" d="M ${P(9, 118.5)[0]} ${P(9, 118.5)[1]} A 118.5 118.5 0 0 1 ${P(38, 118.5)[0]} ${P(38, 118.5)[1]}" fill="none"/>
       <text font-size="7" letter-spacing="1.5" fill="${G2}" font-family="${F}" dy="2.6"><textPath href="#tachArc">BLUMENFELD</textPath></text>
-      <text x="${c + 30}" y="${cy - 20}" text-anchor="middle" font-size="8" letter-spacing="2" fill="${G2}" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
-      <text x="${c + 30}" y="${cy - 13}" text-anchor="middle" font-size="3.6" letter-spacing="1.2" fill="${G}" font-family="${F}">CHRONOGRAPH</text>
       <text id="wDay" x="${c + 61}" y="${cy + 3}" text-anchor="middle" font-size="7.5" fill="${G2}" font-family="${F}">MON</text>
       <text id="wDate" x="${c + 80}" y="${cy + 3}" text-anchor="middle" font-size="8" fill="${G2}" font-family="${F}">1</text>
       ${hand("hh", 60, 4.6)}${hand("mm", 92, 3.6)}
@@ -284,15 +283,13 @@
     const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
     const nextPkg = ofd ? `${ofd} out for delivery` : active[0]?.status ? `${esc(active[0].label || "Package")} · ${esc(active[0].status)}` : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`;
 
-    const q = QUOTES[dayOfYear() % QUOTES.length];
     return `<section class="hero">
         <div class="spot"></div>
         <div class="duo">
-          <figure class="us"><picture><source srcset="/us.webp?v=5" type="image/webp"><img src="/us.png?v=5" alt="Jeff and Lindsey" draggable="false"></picture></figure>
+          <figure class="us"><picture><source srcset="/us.webp?v=6" type="image/webp"><img src="/us.png?v=6" alt="Jeff and Lindsey" draggable="false"></picture></figure>
           <div class="watch">${watchSVG()}</div>
         </div>
         <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
-        <blockquote class="qotd"><span class="qm">“</span>${esc(q)}<span class="qm">”</span><cite>Quote of the day</cite></blockquote>
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
