@@ -647,6 +647,30 @@
     finally { if (btn) btn.disabled = false; }
   }
 
+  // ---------- Auto-update: when a new version is live, reload on its own ----------
+  // Checks every minute and whenever Life comes back to the foreground. Waits while a sheet is open or you're typing.
+  const myVer = (document.querySelector('script[src*="app.js"]')?.getAttribute("src").match(/v=(\d+)/) || [])[1];
+  let pendingVer = null;
+  async function checkVersion() {
+    try {
+      const html = await (await fetch("/?_=" + Date.now(), { cache: "no-store" })).text();
+      const v = (html.match(/app\.js\?v=(\d+)/) || [])[1];
+      if (v && myVer && v !== myVer) pendingVer = v;
+    } catch (_) {}
+    applyUpdate();
+  }
+  function applyUpdate() {
+    if (!pendingVer) return;
+    const busy = document.getElementById("modal") || document.getElementById("gmodal") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+    if (busy) return;
+    try { sessionStorage.setItem("life.updated", "1"); } catch (_) {}
+    location.reload();
+  }
+  setInterval(checkVersion, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkVersion(); });
+  document.addEventListener("focusout", () => setTimeout(applyUpdate, 300));
+  try { if (sessionStorage.getItem("life.updated")) { sessionStorage.removeItem("life.updated"); setTimeout(() => toast("Life updated"), 900); } } catch (_) {}
+
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.open) location.hash = e.data.open; });
   linkSignIn().then(boot, () => {});
