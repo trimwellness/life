@@ -56,16 +56,19 @@ export function occursOn(ev, d) {
 export function occurrences(ev, from, to) { const out = []; for (let d = from < ev.date ? ev.date : from; d <= to; d = addDays(d, 1)) if (occursOn(ev, d)) out.push(d); return out; }
 
 const clock = (t) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
-function whenText(ev, d, off) {
-  const at = ev.time ? clock(ev.time) : "all day";
-  if (off === 0) return ev.time ? `Now · ${at}` : "Today";
-  if (off === 1440) return `Tomorrow${ev.time ? " at " + at : ""}`;
-  if (off === 2880) return `In 2 days · ${d.slice(5).replace("-", "/")}${ev.time ? " " + at : ""}`;
-  if (off === 10080) return `In 1 week · ${d.slice(5).replace("-", "/")}${ev.time ? " " + at : ""}`;
-  return `In ${off >= 60 ? off / 60 + " hr" : off + " min"} · ${at}`;
+const KIND_NAME = { work: "Work", med: "Medication", appt: "Appointment", personal: "Personal", bill: "Bill", other: "" };
+function dayWord(d, now) { const t = localDate(now); if (d === t) return "Today"; if (d === addDays(t, 1)) return "Tomorrow"; return new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" }); }
+// Notification text, written like a calendar app's: title = what, body = when · where.
+function reminderText(ev, d, off, now) {
+  const span = ev.time ? clock(ev.time) + (ev.end ? ` – ${clock(ev.end)}` : "") : "All day";
+  let when = off > 0 && off < 1440 ? `Starts in ${off >= 60 ? `${off / 60} hour${off === 60 ? "" : "s"}` : `${off} minutes`} · ${span}` : `${dayWord(d, now)} · ${span}`;
+  if (ev.kind === "med") return { title: "Medication Reminder", body: `${ev.title} · ${ev.time ? clock(ev.time) : "Today"}` };
+  if (ev.kind === "bill") return { title: "Payment Due", body: `${ev.title} · ${dayWord(d, now)}` };
+  return { title: ev.title, body: [when, ev.location].filter(Boolean).join(" · ") };
 }
 
 // Runs every 5 minutes: sends any reminder whose time has come (and hasn't been sent).
+export { reminderText };
 export async function runReminders(s, now = Date.now()) {
   const { blobs } = await s.list({ prefix: "events/" });
   const evs = (await Promise.all(blobs.map(async (b) => ({ id: b.key.slice(7), ...(await s.get(b.key, { type: "json" })) })))).filter((e) => e.date);
@@ -79,7 +82,7 @@ export async function runReminders(s, now = Date.now()) {
       for (const off of ev.reminders || []) {
         const fire = at - off * 60000, key = `${ev.id}|${d}|${off}`;
         if (fire > now || fire < now - 20 * 60000 || sent[key]) continue;
-        await sendPush(s, { title: `${ev.kind === "med" ? "💊 " : ""}${ev.title}`, body: whenText(ev, d, off) + (ev.location ? ` · ${ev.location}` : ""), tag: key, url: "/#cal" });
+        await sendPush(s, { ...reminderText(ev, d, off, now), tag: key, url: "/#cal" });
         sent[key] = now; n++;
       }
     }

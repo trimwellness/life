@@ -85,8 +85,8 @@ export async function checkPackages(s, opts = {}) {
     out.updated++;
     // Alert on every change after the first reading; on the first reading only if it's already notable.
     if (changed && (p.statusCode !== undefined || [0, 3, 4, 6, 7].includes(code))) {
-      const icon = code === 0 ? "✅ Delivered" : code === 4 ? "🚚 Out for delivery" : code === 6 || code === 7 ? "⚠️ " + status : "📦 " + status;
-      await sendPush(s, { title: `${icon}: ${p.label || "Package"}`, body: summary, tag: "pkg-" + p.id, url: "/#pkgs" });
+      const head = code === 0 ? "Package Delivered" : code === 4 ? "Out for Delivery" : code === 6 || code === 7 ? "Delivery Exception" : "Package Update";
+      await sendPush(s, { title: head, body: `${p.label || "Package"} — ${summary}`, tag: "pkg-" + p.id, url: "/#pkgs" });
     }
   }
   return out;

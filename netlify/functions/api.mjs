@@ -110,7 +110,7 @@ export default async (req) => {
         await s.setJSON("push/" + (await hashOf(b.sub.endpoint)), { sub: b.sub, device: clip(b.device, 80), at: Date.now() });
         return json({ ok: true });
       }
-      if (parts[1] === "test" && m === "POST") return json(await sendPush(s, { title: "Life", body: "Alerts are on for this device.", tag: "test", url: "/#pkgs" }));
+      if (parts[1] === "test" && m === "POST") return json(await sendPush(s, { title: "Notifications Enabled", body: "Calendar reminders and delivery updates will appear on this device.", tag: "test", url: "/#cal" }));
     }
 
     return json({ error: "not found" }, 404);
