@@ -119,13 +119,14 @@ a.btn{text-decoration:none;display:inline-block}
 .wdate{text-align:center;color:var(--gold);font-size:12px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:10px}
 /* ---- Home: executive ---- */
 .hero{position:relative;overflow-x:clip;display:flex;flex-direction:column;align-items:center;padding:0;margin:-6px -16px 0}
-.hero .spot{position:absolute;left:50%;top:6px;width:min(92vw,420px);height:min(92vw,420px);transform:translateX(-50%);border-radius:50%;
+.hero .spot{position:absolute;left:50%;top:50%;margin-top:calc(min(80vw,360px) / -2);width:min(80vw,360px);height:min(80vw,360px);transform:translateX(-50%);border-radius:50%;
   background:radial-gradient(circle,rgba(212,175,55,.16) 0%,rgba(212,175,55,.05) 38%,transparent 66%);pointer-events:none}
 @keyframes breathe{50%{opacity:.6;transform:translateX(-50%) scale(.96)}}
-.duo{position:relative;width:calc(100% + 32px);margin:0 -16px;height:clamp(250px,68vw,290px);overflow:clip}
-.us{margin:0;position:absolute;left:19%;top:50%;transform:translateY(-50%);z-index:2}
-.us img{display:block;width:auto;height:clamp(200px,56vw,240px);filter:drop-shadow(0 14px 22px rgba(0,0,0,.75)) saturate(1.05);-webkit-touch-callout:none;user-select:none;pointer-events:none}
-.hero .watch{position:absolute;right:-10%;top:50%;width:min(76vw,330px);-webkit-mask-image:linear-gradient(90deg,#000 66%,transparent 90%);mask-image:linear-gradient(90deg,#000 66%,transparent 90%);margin:0;min-height:0;transform:translateY(-50%);animation:none}
+.duo{position:relative;width:100%;height:clamp(250px,68vw,300px);overflow:clip;--W:min(70vw,290px)}
+.combo{position:relative;height:100%;width:calc(var(--W) * 1.17);margin:0 auto}
+.us{margin:0;position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:2;width:calc(var(--W) * .44)}
+.us img{display:block;width:100%;height:auto;filter:drop-shadow(6px 10px 14px rgba(0,0,0,.85)) saturate(1.05);-webkit-touch-callout:none;user-select:none;pointer-events:none}
+.hero .watch{position:absolute;right:0;top:50%;width:var(--W);margin:0;min-height:0;transform:translateY(-50%);animation:none}
 .hero .watch svg{width:100%;max-width:none;height:auto;display:block;filter:none}
 .qotd{margin:16px 26px 0;padding:0;text-align:center;font:italic 400 17px/1.45 "Didot","Bodoni 72",Georgia,serif;color:#efe6cf;max-width:520px;animation:up .8s .3s both}
 .qotd .qm{color:var(--gold);font-size:22px;line-height:0;vertical-align:-4px;margin:0 2px}
@@ -217,6 +218,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=24"></script>
+<script src="/app.js?v=25"></script>
 </body>
 </html>

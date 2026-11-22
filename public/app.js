@@ -285,10 +285,10 @@
 
     return `<section class="hero">
         <div class="spot"></div>
-        <div class="duo">
-          <figure class="us"><picture><source srcset="/us.webp?v=6" type="image/webp"><img src="/us.png?v=6" alt="Jeff and Lindsey" draggable="false"></picture></figure>
+        <div class="duo"><div class="combo">
           <div class="watch">${watchSVG()}</div>
-        </div>
+          <figure class="us"><picture><source srcset="/us.webp?v=6" type="image/webp"><img src="/us.png?v=6" alt="Jeff and Lindsey" draggable="false"></picture></figure>
+        </div></div>
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
