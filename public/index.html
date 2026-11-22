@@ -122,8 +122,15 @@ a.btn{text-decoration:none;display:inline-block}
 .hero .spot{position:absolute;left:50%;top:6px;width:min(92vw,420px);height:min(92vw,420px);transform:translateX(-50%);border-radius:50%;
   background:radial-gradient(circle,rgba(212,175,55,.16) 0%,rgba(212,175,55,.05) 38%,transparent 66%);pointer-events:none;animation:breathe 6s ease-in-out infinite}
 @keyframes breathe{50%{opacity:.6;transform:translateX(-50%) scale(.96)}}
-.hero .watch{margin:0;min-height:0}
-.hero .watch svg{width:min(56vw,224px)}
+.duo{position:relative;display:grid;grid-template-columns:44% 56%;align-items:center;width:100%;max-width:520px;padding:0 10px}
+.us{margin:0;position:relative;animation:up .8s .05s both}
+.us img{display:block;width:100%;height:auto;filter:drop-shadow(0 14px 22px rgba(0,0,0,.7)) saturate(1.05)}
+.us figcaption{position:absolute;left:0;right:0;bottom:2%;text-align:center;font:italic 400 13px/1 "Didot","Bodoni 72",Georgia,serif;color:var(--gold2);letter-spacing:.06em;text-shadow:0 2px 8px #000}
+.hero .watch{margin:0 0 0 -6px;min-height:0;animation:up .8s .15s both}
+.hero .watch svg{width:100%;max-width:240px}
+.qotd{margin:16px 26px 0;padding:0;text-align:center;font:italic 400 17px/1.45 "Didot","Bodoni 72",Georgia,serif;color:#efe6cf;max-width:520px;animation:up .8s .3s both}
+.qotd .qm{color:var(--gold);font-size:22px;line-height:0;vertical-align:-4px;margin:0 2px}
+.qotd cite{display:block;margin-top:8px;font:600 9.5px/1 -apple-system,sans-serif;font-style:normal;letter-spacing:.3em;text-transform:uppercase;color:#8d8471}
 .crest{display:flex;align-items:center;gap:14px;margin-top:18px;font:500 21px/1 "Didot","Bodoni 72",Georgia,serif;letter-spacing:.42em;text-transform:uppercase;padding-left:.42em;animation:up .8s .2s both}
 .crest span{background:var(--goldg);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite}
 .crest i{display:block;width:34px;height:1px;flex:none;background:linear-gradient(90deg,transparent,var(--gold))}
@@ -212,6 +219,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=12"></script>
+<script src="/app.js?v=13"></script>
 </body>
 </html>

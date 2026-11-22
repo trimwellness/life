@@ -286,10 +286,15 @@
     const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
     const nextPkg = ofd ? `${ofd} out for delivery` : active[0]?.status ? `${esc(active[0].label || "Package")} · ${esc(active[0].status)}` : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`;
 
+    const q = QUOTES[dayOfYear() % QUOTES.length];
     return `<section class="hero">
         <div class="spot"></div>
-        <div class="watch">${watchSVG()}</div>
+        <div class="duo">
+          <figure class="us"><picture><source srcset="/us.webp?v=3" type="image/webp"><img src="/us.png?v=3" alt="Jeff and Lindsey"></picture><figcaption>Jeff &amp; Lindsey</figcaption></figure>
+          <div class="watch">${watchSVG()}</div>
+        </div>
         <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
+        <blockquote class="qotd"><span class="qm">“</span>${esc(q)}<span class="qm">”</span><cite>Quote of the day</cite></blockquote>
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
@@ -301,6 +306,51 @@
         ${box("photos", "photo", "Photo Vault", "", "OneDrive folders", 5)}
       </div>`;
   }
+
+  // Original business maxims, one per day of the year.
+  const QUOTES = [
+    "Build the business you'd want to buy.",
+    "The customer remembers how you made them feel long after they forget the price.",
+    "Standards aren't what you say. They're what you tolerate.",
+    "Small wins, stacked daily, beat big plans left on paper.",
+    "Lead from the front on the hard days. That's the only time it counts.",
+    "Cash is the scoreboard. Culture is how you keep winning.",
+    "Hire for attitude, train for skill, keep for character.",
+    "Every bay full, every promise kept.",
+    "If it isn't measured, it's just a guess with confidence.",
+    "Your team watches what you do far more than what you say.",
+    "Done right beats done twice.",
+    "The best time to fix a problem is before the customer finds it.",
+    "Momentum is built in the boring hours.",
+    "A follow-up call is worth ten promises.",
+    "Be the calmest person in the room when things go sideways.",
+    "Profit is the reward for solving problems people will pay to have solved.",
+    "Invest in people before you invest in equipment.",
+    "Excuses don't scale. Systems do.",
+    "Win the morning and the rest of the day follows.",
+    "Make the next step obvious for your team, and they'll take it.",
+    "Trust is earned in drops and lost in buckets.",
+    "The details nobody sees are the ones that build the reputation.",
+    "Grow quietly. Let the results be loud.",
+    "Pressure is a privilege. It means something's riding on you.",
+    "Don't manage the numbers. Manage the habits that make them.",
+    "A good leader takes a little more blame and a little less credit.",
+    "Discipline today buys freedom tomorrow.",
+    "Treat every Tuesday like it's Black Friday and Black Friday takes care of itself.",
+    "Build it with someone who believes in you, and build it for them too.",
+    "Consistency is the most underrated competitive advantage.",
+    "The work you avoid is usually the work that matters most.",
+    "Raise the floor before you chase the ceiling.",
+    "Wealth is patience with a plan.",
+    "Show up the same on the hard days as the easy ones.",
+    "Teach the why and the how takes care of itself.",
+    "Protect your reputation like it's your best asset, because it is.",
+    "Say what you'll do, do what you said, then do a little more.",
+    "Good people stay where they're seen, heard and paid fairly.",
+    "Clarity is kindness. Tell people exactly what winning looks like.",
+    "You don't rise to your goals; you fall to your systems.",
+  ];
+  const dayOfYear = () => { const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" })); return Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5); };
 
   // ---------- To-Do ----------
   function pTodo() {
