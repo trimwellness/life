@@ -276,6 +276,8 @@
         <div><div class="lbl">Year</div><div class="v">${usd(trim.ytd.sales, false)}</div></div></div>`;
     }
 
+    const box = (href, ic, title, val, sub, i) => `<a class="lux qbox" href="#${href}" style="--i:${i}"><div class="lux-h"><span>${title}</span><span class="aic">${svg(ic)}</span></div>
+      <div class="qv">${val === "" ? "<span class=\"soon\">Soon</span>" : n(val)}</div><div class="qs">${sub}</div></a>`;
     const row = (href, ic, title, sub, val, i) => `<a class="arow" href="#${href}" style="--i:${i}"><span class="aic">${svg(ic)}</span>
       <span class="grow"><span class="at">${title}</span><span class="as">${sub}</span></span><span class="av">${val}</span><span class="chev">›</span></a>`;
     const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
@@ -288,11 +290,11 @@
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
       <a class="lux" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
-      <div class="lux agenda" style="--i:2"><div class="lux-h"><span>Agenda</span></div>
-        ${row("todo", "check", "To-Do", nextTodo, `${open.length}${late ? `<em>${late} due</em>` : ""}`, 0)}
-        ${row("pkgs", "box", "Incoming", nextPkg, active.length + trimIn, 1)}
-        ${row("wish", "gift", "Wish List", wishes.length ? `${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} across ${wishes.length} item${wishes.length === 1 ? "" : "s"}` : "Empty", wishes.length, 2)}
-        ${row("photos", "photo", "Photo Vault", "OneDrive · coming soon", "", 3)}
+      <div class="quad">
+        ${box("todo", "check", "To-Do", open.length, late ? `<em>${late} due</em>${esc(open[0]?.text || "")}` : nextTodo, 2)}
+        ${box("pkgs", "box", "Incoming", active.length + trimIn, nextPkg, 3)}
+        ${box("wish", "gift", "Wish List", wishes.length, wishes.length ? usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false) + " total" : "Empty", 4)}
+        ${box("photos", "photo", "Photo Vault", "", "OneDrive folders", 5)}
       </div>`;
   }
 

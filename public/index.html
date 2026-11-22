@@ -124,8 +124,9 @@ a.btn{text-decoration:none;display:inline-block}
 @keyframes breathe{50%{opacity:.6;transform:translateX(-50%) scale(.96)}}
 .hero .watch{margin:0;min-height:0}
 .hero .watch svg{width:min(56vw,224px)}
-.crest{display:flex;align-items:center;gap:12px;margin-top:16px;color:var(--gold);font:500 11px/1 "Didot","Bodoni 72",Georgia,serif;letter-spacing:.55em;text-transform:uppercase;padding-left:.55em;animation:up .8s .2s both}
-.crest i{display:block;width:44px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.crest{display:flex;align-items:center;gap:14px;margin-top:18px;font:500 21px/1 "Didot","Bodoni 72",Georgia,serif;letter-spacing:.42em;text-transform:uppercase;padding-left:.42em;animation:up .8s .2s both}
+.crest span{background:var(--goldg);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite}
+.crest i{display:block;width:34px;height:1px;flex:none;background:linear-gradient(90deg,transparent,var(--gold))}
 .crest i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
 .lux{display:block;text-decoration:none;color:inherit;margin:14px 0;padding:18px 18px 16px;border-radius:22px;position:relative;overflow:hidden;
   background:linear-gradient(180deg,rgba(28,25,19,.94),rgba(9,9,8,.96)) padding-box,linear-gradient(160deg,rgba(246,221,140,.6),rgba(168,122,30,.08) 35%,rgba(168,122,30,.08) 70%,rgba(246,221,140,.35)) border-box;
@@ -162,6 +163,14 @@ a.lux:active{transform:scale(.985)}
 .as{font-size:12.5px;color:#8d8471;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .av{font:400 22px/1 "Didot","Bodoni 72",Georgia,serif;color:var(--gold2);text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .av em{font:600 9.5px/1 -apple-system,sans-serif;font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:#ff9585}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.quad .lux{margin:0;min-height:156px;display:flex;flex-direction:column;padding:16px}
+.qbox .lux-h{letter-spacing:.2em;margin-bottom:6px}
+.qbox .aic{width:32px;height:32px}.qbox .aic svg{width:15px;height:15px}
+.qv{font:400 44px/1 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin-top:auto}
+.qv .soon{font-size:26px;color:#8d8471}
+.qs{font-size:12.5px;color:#8d8471;margin-top:6px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.qs em{display:block;font:600 10px/1.4 -apple-system,sans-serif;font-style:normal;letter-spacing:.12em;text-transform:uppercase;color:#ff9585}
 /* Bottom tabs */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,rgba(10,10,10,.75),rgba(4,4,4,.96));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-top:1px solid rgba(212,175,55,.3)}
 nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);position:relative}
@@ -177,6 +186,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=10"></script>
+<script src="/app.js?v=11"></script>
 </body>
 </html>
