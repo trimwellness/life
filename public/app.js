@@ -685,7 +685,7 @@
     if (GV.data.error) return head + `<div class="empty">${esc(GV.data.error)}</div>`;
     const t = gvTotals(), d = GV.data, imp = GV.importing;
     const banner = imp ? `<div class="pv-prog"><i style="width:${imp.total ? Math.round(((imp.total - imp.left) / imp.total) * 100) : 4}%"></i><span>Bringing in your Safe Ledger${imp.total ? ` · ${imp.total - imp.left} of ${imp.total} files` : "…"}</span></div>` : "";
-    const sum = `<section class="gv-hero"><picture><source srcset="/gv-hero.webp?v=1" type="image/webp"><img src="/gv-hero.jpg?v=1" alt="" draggable="false"></picture>
+    const sum = `<section class="gv-hero"><picture><source srcset="/gv-hero.webp?v=2" type="image/webp"><img src="/gv-hero.jpg?v=2" alt="" draggable="false"></picture>
       <div class="gv-hero-txt"><div class="gv-eb">Safe Ledger</div><div class="gv-title">Gun Vault</div><div class="lbl" style="color:var(--gold);margin-top:14px">Collection value</div><div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div></div></section>
       <div class="lux gv-sum" style="--i:0"><div class="cols" style="margin:0;padding:0;border:0"><div><div class="lbl">Firearms</div><div class="v">${d.firearms.length} · ${usd(t.firearms, false)}</div></div>
       <div><div class="lbl">NFA</div><div class="v">${d.nfa.length} · ${usd(t.nfa, false)}</div></div>
