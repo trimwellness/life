@@ -64,8 +64,8 @@
     render();
     loadTrim(); loadMoney();
   }
-  async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "home", "trim"].includes(route())) render(); }
-  async function loadMoney() { try { money = await api("money"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } if (["", "home", "money"].includes(route())) render(); }
+  async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "trim"].includes(route())) render(); }
+  async function loadMoney() { try { money = await api("money"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } if (["", "money"].includes(route())) render(); }
 
   async function save(col, doc) {
     const { id, ...body } = doc;
@@ -84,30 +84,145 @@
   // ---------- Routing ----------
   const route = () => location.hash.replace(/^#/, "");
   window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim") loadTrim(); });
-  const top = (title, right = "") => `<div class="top"><button class="back" data-go="">‹ Life</button><div class="grow" style="flex:1"></div>${right}</div><h1>${title}</h1>`;
+  const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["todo", "To-Do", "check"], ["pkgs", "Packages", "box"]];
+  const ICON = {
+    home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
+    chart: '<path d="M3 20h18"/><path d="M6 16v-4M11 16V7M16 16v-6M20 5l-5 4-4-3-6 5"/>',
+    check: '<path d="M8.5 12.5l2.5 2.5 5-6"/><rect x="3.5" y="3.5" width="17" height="17" rx="4"/>',
+    box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+    gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
+    photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  };
+  const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
+  const top = (title, right = "") => {
+    const isTab = TABS.some(([r]) => r === route());
+    return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1>${title}</h1>`;
+  };
 
+  function tabBar() {
+    let nav = document.querySelector("nav.tabs");
+    if (!nav) {
+      nav = document.createElement("nav");
+      nav.className = "tabs";
+      nav.innerHTML = `<div class="in"><span class="ind"></span>${TABS.map(([r, n, ic]) => `<a href="#${r}" data-tab="${r}">${svg(ic)}<span>${n}</span></a>`).join("")}</div>`;
+      document.body.appendChild(nav);
+    }
+    const r = route(), i = TABS.findIndex(([x]) => x === r);
+    nav.querySelectorAll("a").forEach((a) => a.classList.toggle("on", a.dataset.tab === r));
+    const ind = nav.querySelector(".ind");
+    ind.style.opacity = i < 0 ? 0 : 1;
+    if (i >= 0) ind.style.left = i * 20 + "%";
+  }
+
+  let lastRoute = null;
   function render() {
     const r = route();
     const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos }[r] || pHome;
-    $app.innerHTML = page();
+    const fresh = r !== lastRoute;
+    lastRoute = r;
+    $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
+    tabBar();
+    if (fresh) countUp();
+    else $app.querySelectorAll(".grid.enterTiles").forEach((g) => g.classList.remove("enterTiles"));
+    if (!fresh) $app.querySelectorAll("[data-count]").forEach((el) => (el.textContent = fmtCount(el)));
   }
+
+  // Numbers roll up from zero when a page opens.
+  const fmtCount = (el, v = +el.dataset.count) => (el.dataset.fmt === "usd" ? usd(v, false) : Math.round(v).toLocaleString("en-US"));
+  function countUp() {
+    const els = [...$app.querySelectorAll("[data-count]")];
+    if (!els.length) return;
+    const t0 = performance.now(), dur = 900;
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      els.forEach((el) => { if (el.isConnected) el.textContent = fmtCount(el, +el.dataset.count * e); });
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ---------- Watch: real time and date (Eastern), sweeping seconds at 8 beats a second ----------
+  function watchSVG() {
+    const c = 150, ticks = [], idx = [];
+    for (let i = 0; i < 60; i++) {
+      const a = (i * 6 * Math.PI) / 180, big = i % 5 === 0, r1 = 118, r2 = big ? 108 : 113;
+      if (!big) ticks.push(`<line x1="${c + r1 * Math.sin(a)}" y1="${c - r1 * Math.cos(a)}" x2="${c + r2 * Math.sin(a)}" y2="${c - r2 * Math.cos(a)}" stroke="#bfa45a" stroke-width="1" opacity=".7"/>`);
+    }
+    for (let h = 0; h < 12; h++) {
+      if (h === 3) continue; // date window
+      const deg = h * 30, w = h === 0 ? 9 : 6.5, len = h === 0 ? 24 : 20;
+      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 112}" width="${w}" height="${len}" rx="1.4" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/>${h === 0 ? `<rect x="${c - 1.3}" y="${c - 110}" width="2.6" height="${len - 4}" fill="#0a0a0a" opacity=".55"/>` : `<rect x="${c - 1.6}" y="${c - 109}" width="3.2" height="${len - 6}" rx="1" fill="#eef3e2" opacity=".9"/>`}</g>`);
+    }
+    return `<svg viewBox="0 0 300 300" aria-label="Watch">
+      <defs>
+        <linearGradient id="gCase" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe7a1"/><stop offset=".25" stop-color="#c9982c"/><stop offset=".5" stop-color="#fff3c4"/><stop offset=".75" stop-color="#a87a1e"/><stop offset="1" stop-color="#e9c766"/></linearGradient>
+        <linearGradient id="gIdx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a87a1e"/><stop offset=".5" stop-color="#fff0b8"/><stop offset="1" stop-color="#b8862b"/></linearGradient>
+        <radialGradient id="gDial" cx=".5" cy=".42" r=".65"><stop offset="0" stop-color="#2a2a2a"/><stop offset=".55" stop-color="#0d0d0d"/><stop offset="1" stop-color="#000"/></radialGradient>
+        <linearGradient id="gGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="2.2" flood-opacity=".75"/></filter>
+      </defs>
+      <circle cx="${c}" cy="${c}" r="147" fill="url(#gCase)"/>
+      <circle cx="${c}" cy="${c}" r="139" fill="none" stroke="#5b420f" stroke-width="1.2" opacity=".6"/>
+      <circle cx="${c}" cy="${c}" r="136" fill="url(#gCase)" transform="rotate(180 ${c} ${c})"/>
+      <circle cx="${c}" cy="${c}" r="124" fill="url(#gDial)" stroke="#2b2111" stroke-width="2"/>
+      <g opacity=".08">${Array.from({ length: 72 }, (_, i) => `<line x1="${c}" y1="${c}" x2="${c + 124 * Math.sin((i * 5 * Math.PI) / 180)}" y2="${c - 124 * Math.cos((i * 5 * Math.PI) / 180)}" stroke="#fff" stroke-width=".6"/>`).join("")}</g>
+      ${ticks.join("")}${idx.join("")}
+      <text x="${c}" y="${c - 58}" text-anchor="middle" font-family="Didot,'Bodoni 72',Georgia,serif" font-size="19" letter-spacing="5" fill="url(#gIdx)">LIFE</text>
+      <text x="${c}" y="${c - 44}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="6.2" letter-spacing="2.4" fill="#bfa45a">BLUMENFELD</text>
+      <text x="${c}" y="${c + 56}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="6.4" letter-spacing="2.6" fill="#bfa45a">AUTOMATIC</text>
+      <text x="${c}" y="${c + 66}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="5.2" letter-spacing="2" fill="#8b7a4f">EST. 2026</text>
+      <g filter="url(#sh)"><rect x="${c + 78}" y="${c - 11}" width="30" height="22" rx="2.5" fill="#f6f1e4" stroke="url(#gIdx)" stroke-width="2.4"/>
+      <text id="wDate" x="${c + 93}" y="${c + 6.8}" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-weight="700" font-size="17" fill="#111">1</text></g>
+      <g id="hh" filter="url(#sh)"><path d="M${c - 5} ${c + 14} L${c - 4.2} ${c - 52} L${c} ${c - 66} L${c + 4.2} ${c - 52} L${c + 5} ${c + 14} Z" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/><rect x="${c - 1.5}" y="${c - 54}" width="3" height="40" rx="1.2" fill="#eef3e2" opacity=".9"/></g>
+      <g id="mm" filter="url(#sh)"><path d="M${c - 4} ${c + 18} L${c - 3.2} ${c - 92} L${c} ${c - 104} L${c + 3.2} ${c - 92} L${c + 4} ${c + 18} Z" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".6"/><rect x="${c - 1.3}" y="${c - 94}" width="2.6" height="70" rx="1" fill="#eef3e2" opacity=".9"/></g>
+      <g id="ss" filter="url(#sh)"><line x1="${c}" y1="${c + 30}" x2="${c}" y2="${c - 112}" stroke="#e8c45e" stroke-width="1.5" stroke-linecap="round"/><circle cx="${c}" cy="${c - 80}" r="4" fill="#0b0b0b" stroke="#e8c45e" stroke-width="1.5"/><circle cx="${c}" cy="${c + 24}" r="4.5" fill="#e8c45e"/></g>
+      <circle cx="${c}" cy="${c}" r="6" fill="url(#gIdx)" stroke="#6b4e12" stroke-width=".8"/><circle cx="${c}" cy="${c}" r="2" fill="#2b2111"/>
+      <ellipse cx="${c - 20}" cy="${c - 62}" rx="96" ry="58" fill="url(#gGlass)" transform="rotate(-18 ${c} ${c})"/>
+    </svg>`;
+  }
+  // Eastern time parts, then hands. Seconds advance in 1/8-second beats like a mechanical movement.
+  const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric" });
+  function tickWatch() {
+    const hh = document.getElementById("hh");
+    if (hh) {
+      const now = new Date(), p = Object.fromEntries(NY.formatToParts(now).map((x) => [x.type, x.value]));
+      const ms = Math.floor(now.getMilliseconds() / 125) * 125;
+      const s = +p.second + ms / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
+      hh.setAttribute("transform", `rotate(${h * 30} 150 150)`);
+      document.getElementById("mm").setAttribute("transform", `rotate(${m * 6} 150 150)`);
+      document.getElementById("ss").setAttribute("transform", `rotate(${s * 6} 150 150)`);
+      const d = document.getElementById("wDate");
+      if (d.textContent !== p.day) d.textContent = p.day;
+    }
+    requestAnimationFrame(tickWatch);
+  }
+  requestAnimationFrame(tickWatch);
 
   // ---------- Home ----------
   function pHome() {
     const open = D.todo.filter((t) => !t.done), dueToday = open.filter((t) => t.due && t.due <= todayKey()).length;
     const wishes = D.wish.filter((w) => !w.got);
     const active = D.pkgs.filter((p) => !p.delivered && !p.archived), ofd = active.filter((p) => p.statusCode === 4).length;
-    const hr = new Date().getHours(), hello = hr < 12 ? "Morning" : hr < 17 ? "Afternoon" : "Evening";
-    const moneyTile = money?.ready ? `<div class="big money">${usd(money.cash ?? 0, false)}</div><div class="sm">Cash across accounts</div>` : `<div class="sm">${esc(money?.why || "Loading…")}</div>`;
-    const trimTile = trim?.ready ? `<div class="big money">${usd(trim.daily.sales, false)}</div><div class="sm">Today · ${usd(trim.wtd.sales, false)} this week</div>` : `<div class="sm">${esc(trim?.why || "Loading…")}</div>`;
-    return `<h1>${hello}, Jeff</h1><div class="sub">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
-    <div class="grid">
-      <a class="tile" href="#money"><div><div class="ic">🏦</div><div class="nm">Money</div></div>${moneyTile}</a>
-      <a class="tile" href="#trim"><div><div class="ic">💊</div><div class="nm">Trim Sales</div></div>${trimTile}</a>
-      <a class="tile" href="#todo"><div><div class="ic">✅</div><div class="nm">To-Do</div></div><div><div class="big">${open.length}</div><div class="sm">${dueToday ? dueToday + " due today or late" : "open"}</div></div></a>
-      <a class="tile" href="#pkgs"><div><div class="ic">📦</div><div class="nm">Packages</div></div><div><div class="big">${active.length}</div><div class="sm">${ofd ? ofd + " out for delivery" : "on the way"}</div></div></a>
-      <a class="tile" href="#wish"><div><div class="ic">🎁</div><div class="nm">Wish List</div></div><div><div class="big">${wishes.length}</div><div class="sm">${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} total</div></div></a>
-      <a class="tile" href="#photos"><div><div class="ic">🖼️</div><div class="nm">Photo Vault</div></div><div class="sm">OneDrive folders</div></a>
+    const n = (v, fmt) => `<span data-count="${+v || 0}"${fmt ? ` data-fmt="${fmt}"` : ""}>${fmt === "usd" ? usd(v, false) : v}</span>`;
+    const moneyTile = money?.ready
+      ? `<div class="row2"><div><div class="big money">${n(money.cash ?? 0, "usd")}</div><div class="sm">Cash across accounts</div></div>
+         <div style="text-align:right"><div class="big money" style="font-size:18px;color:var(--gold2)">${n(money.credit ?? 0, "usd")}</div><div class="sm">Credit owed</div></div></div>`
+      : `<div class="sm">${esc(money?.why || "Loading…")}</div>`;
+    const max = trim?.ready ? Math.max(1, ...trim.week.map((d) => d.sales)) : 1;
+    const trimTile = trim?.ready
+      ? `<div class="row2"><div><div class="big money">${n(trim.daily.sales, "usd")}</div><div class="sm">Today · ${usd(trim.wtd.sales, false)} wk</div></div>
+         <div class="spark">${trim.week.map((d, i) => `<i style="height:${Math.max(6, Math.round((d.sales / max) * 100))}%;animation-delay:${0.3 + i * 0.06}s;${d.day > trim.today ? "opacity:.25" : ""}"></i>`).join("")}</div></div>`
+      : `<div class="sm">${esc(trim?.why || "Loading…")}</div>`;
+    const tile = (href, ic, name, body, i, cls = "") => `<a class="tile ${cls}" href="#${href}" style="--i:${i}"><div class="row"><div class="ic">${svg(ic)}</div><div class="nm" style="margin:0">${name}</div></div>${body}</a>`;
+    return `<div class="watch">${watchSVG()}</div>
+    <div class="grid${lastRoute === null || true ? " enterTiles" : ""}">
+      ${tile("money", "wallet", "Money", moneyTile, 0, "wide")}
+      ${tile("trim", "chart", "Trim Sales", trimTile, 1, "wide")}
+      ${tile("todo", "check", "To-Do", `<div><div class="big">${n(open.length)}</div><div class="sm">${dueToday ? dueToday + " due or late" : "open"}</div></div>`, 2)}
+      ${tile("pkgs", "box", "Packages", `<div><div class="big">${n(active.length)}</div><div class="sm">${ofd ? ofd + " out for delivery" : "on the way"}</div></div>`, 3)}
+      ${tile("wish", "gift", "Wish List", `<div><div class="big">${n(wishes.length)}</div><div class="sm">${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} total</div></div>`, 4)}
+      ${tile("photos", "photo", "Photos", `<div><div class="big" style="font-size:16px;color:var(--mute)">Soon</div><div class="sm">OneDrive folders</div></div>`, 5)}
     </div>`;
   }
 
