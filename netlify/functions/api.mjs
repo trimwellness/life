@@ -4,6 +4,7 @@ import { pushReady, hashOf, sendPush } from "../lib/push.mjs";
 import { trimData, moneyData } from "../lib/feeds.mjs";
 import { vault } from "../lib/vault.mjs";
 import { gunvault } from "../lib/gunvault.mjs";
+import { cleanEvent } from "../lib/calendar.mjs";
 import { passwords } from "../lib/passwords.mjs";
 import { parcelReady, checkPackages, guessCarrier, clean } from "../lib/parcel.mjs";
 
@@ -11,6 +12,7 @@ const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 
 // What each collection keeps; anything else sent is dropped.
 const CLEAN = {
+  events: (b, old = {}) => cleanEvent(b, old),
   todo: (b, old = {}) => ({ text: clip(b.text, 300), due: /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : "", done: !!b.done, doneAt: b.done ? old.doneAt || Date.now() : null, notes: clip(b.notes, 1000) }),
   wish: (b, old = {}) => ({ name: clip(b.name, 200), url: /^https?:\/\//i.test(b.url || "") ? clip(b.url, 1000) : "", price: num(b.price), priority: ["high", "med", "low"].includes(b.priority) ? b.priority : "med", notes: clip(b.notes, 1000), got: !!b.got, gotAt: b.got ? old.gotAt || Date.now() : null }),
   pkgs: (b, old = {}) => {

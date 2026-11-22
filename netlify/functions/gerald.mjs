@@ -3,6 +3,7 @@
 // recent transactions) and a small set of tools for changing Life's own lists. Gerald can't move money or touch
 // the other apps; it only reads them.
 import Anthropic from "@anthropic-ai/sdk";
+import { cleanEvent, agendaLines } from "../lib/calendar.mjs";
 import { store, json, clip, num, newId, readPrefix, signedIn } from "../lib/common.mjs";
 import { trimData, moneyData } from "../lib/feeds.mjs";
 import { guessCarrier, clean, checkPackages, parcelReady } from "../lib/parcel.mjs";
@@ -12,7 +13,7 @@ const $ = (n) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits
 const nowNY = () => new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
 const todayNY = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-function factSheet({ todo, wish, pkgs, trim, money, gv, pw }) {
+function factSheet({ todo, wish, pkgs, trim, money, gv, pw, events }) {
   const out = [];
   const open = todo.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
   out.push(`## To-do (${open.length} open)`);
@@ -47,6 +48,7 @@ function factSheet({ todo, wish, pkgs, trim, money, gv, pw }) {
     out.push(`Transactions, newest first (positive = money out, negative = money in):`);
     money.transactions.forEach((t) => out.push(`${t.date} | ${t.name} | ${t.amount} | ${t.account}${t.pending ? " | pending" : ""}`));
   } else out.push(`Not available right now: ${money.why}`);
+  if (events) { out.push(`## Calendar — next 14 days (today is ${new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date())})`); const l = agendaLines(events); out.push(...(l.length ? l : ["- Nothing scheduled"])); }
   // Gun Vault (no serial numbers are shared with the model)
   if (gv) {
     const sum = (p) => (p || []).reduce((a, x) => a + (+x.price || 0), 0);
@@ -74,6 +76,7 @@ Rules:
 - Do arithmetic carefully when asked for totals (e.g. spending at a merchant); state the date range you covered. The transaction list may not reach far back.
 - Use the tools to change Life's lists when Jeff asks (add/complete to-dos, add wish-list items, track packages). Confirm what you did in one line. For anything outside these tools (moving money, editing Trim orders, the finance app), say you can't do that from here.
 - Don't give investment, tax or legal verdicts; give the facts he needs.
+- Calendar: you can add events/reminders with add_event (e.g. meds daily at 8am → kind "med", repeat "daily"). Default reminders are at the time and 24 hours before unless Jeff says otherwise; for daily meds use just [0].
 - Passwords: you only see login names, usernames, websites and categories, never passwords. When Jeff asks about a login, answer with the username/site and add the marker [[login:ID]] (the login's id) so the app shows a button that opens it, where he can view or copy the password. Never ask Jeff to tell you a password.
 It is now ${nowNY()} (America/New_York). Today's date: ${todayNY()}.
 
@@ -81,6 +84,8 @@ It is now ${nowNY()} (America/New_York). Today's date: ${todayNY()}.
 ${facts}`;
 
 const TOOLS = [
+  { name: "add_event", description: "Add an event or reminder to Jeff's calendar (Life sends push reminders). Times are Jeff's local Eastern time.", input_schema: { type: "object", properties: { title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD (first occurrence)" }, time: { type: "string", description: "HH:MM 24-hour; omit for all-day" }, end: { type: "string", description: "HH:MM, optional" }, kind: { type: "string", enum: ["work", "med", "appt", "personal", "bill", "other"] }, repeat: { type: "string", enum: ["none", "daily", "weekdays", "weekly", "biweekly", "monthly", "yearly"] }, until: { type: "string", description: "YYYY-MM-DD last day, optional" }, reminders: { type: "array", items: { type: "number", enum: [0, 5, 15, 30, 60, 120, 1440, 2880, 10080] }, description: "Minutes before to remind; 0 = at the time, 1440 = 24 hours before. Default [0, 1440]" }, location: { type: "string" }, notes: { type: "string" } }, required: ["title", "date"] } },
+  { name: "delete_event", description: "Delete a calendar event by its id.", input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "add_todo", description: "Add an item to Jeff's to-do list.", input_schema: { type: "object", properties: { text: { type: "string" }, due: { type: "string", description: "YYYY-MM-DD, optional" }, notes: { type: "string" } }, required: ["text"] } },
   { name: "complete_todo", description: "Mark a to-do done by its id.", input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "add_wish", description: "Add an item to Jeff's wish list.", input_schema: { type: "object", properties: { name: { type: "string" }, price: { type: "number" }, url: { type: "string" }, priority: { type: "string", enum: ["high", "med", "low"] }, notes: { type: "string" } }, required: ["name"] } },
@@ -88,6 +93,16 @@ const TOOLS = [
 ];
 
 async function runTool(s, name, a) {
+  if (name === "add_event") {
+    const id = newId(), ev = cleanEvent(a);
+    await s.setJSON("events/" + id, ev);
+    return `Added event ${id}: ${ev.title} on ${ev.date}${ev.time ? " at " + ev.time : " (all day)"}${ev.repeat !== "none" ? ", repeats " + ev.repeat : ""}; reminders ${ev.reminders.join(",")} min before`;
+  }
+  if (name === "delete_event") {
+    const k = "events/" + clip(a.id, 40), doc = await s.get(k, { type: "json" });
+    if (!doc) return "No event with that id.";
+    await s.delete(k); return `Deleted event: ${doc.title}`;
+  }
   if (name === "add_todo") {
     const id = newId();
     await s.setJSON("todo/" + id, { text: clip(a.text, 300), due: /^\d{4}-\d{2}-\d{2}$/.test(a.due || "") ? a.due : "", done: false, doneAt: null, notes: clip(a.notes, 1000) });
@@ -132,10 +147,11 @@ export default async (req) => {
 
   const s = store();
   const gvRead = async () => { const o = {}; for (const c of ["firearms", "nfa", "mags", "spares", "gear"]) o[c] = await readPrefix(s, `gv/${c}/`); return o; };
-  const [todo, wish, pkgs, trim, money, gv] = await Promise.all([
+  const [todo, wish, pkgs, trim, money, gv, events] = await Promise.all([
     readPrefix(s, "todo/"), readPrefix(s, "wish/"), readPrefix(s, "pkgs/"),
     trimData().catch((e) => ({ ready: false, why: e.message })), moneyData(s, 400).catch((e) => ({ ready: false, why: e.message })),
     gvRead().catch(() => null),
+    readPrefix(s, "events/").catch(() => []),
   ]);
 
   // Netlify's AI Gateway normally fills in ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL; pass them explicitly in case
@@ -146,7 +162,7 @@ export default async (req) => {
   let changed = false, reply = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
       if (!uses.length || r.stop_reason !== "tool_use") { reply = text; break; }

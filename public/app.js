@@ -6,7 +6,7 @@
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} },
   };
   let token = store.get("life.token");
-  let D = { todo: [], wish: [], pkgs: [], status: {} };
+  let D = { todo: [], wish: [], pkgs: [], events: [], status: {} };
   let trim = null, money = null;
   const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false, inTab: "personal" };
 
@@ -60,7 +60,7 @@
   // ---------- Data ----------
   async function boot() {
     if (!token) return renderLogin();
-    try { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    try { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
     loadTrim(); loadMoney(); loadGV(); loadAlbums(); pwLoad();
   }
@@ -85,7 +85,7 @@
   const route = () => location.hash.replace(/^#/, "").split("?")[0];
   window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim" || route() === "pkgs") loadTrim(); });
   const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["guns", "Vault", "shield"], ["more", "More", "grid"]];
-  const MORE = ["todo", "pkgs", "wish", "photos", "keys"];
+  const MORE = ["todo", "pkgs", "wish", "photos", "keys", "cal"];
   const ICON = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
@@ -94,6 +94,7 @@
     box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
     gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
     lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/>',
+    cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14" r="1"/><circle cx="12" cy="14" r="1"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -101,7 +102,7 @@
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
   const top = (title, right = "") => {
     const isTab = TABS.some(([r]) => r === route());
-    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted" }[title] || "Life";
+    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted", Calendar: "Schedule" }[title] || "Life";
     return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1 data-eyebrow="${eyebrow}">${title}</h1>`;
   };
 
@@ -126,9 +127,10 @@
   function moreSheet() {
     const open = D.todo.filter((t) => !t.done).length, inc = D.pkgs.filter((p) => !p.delivered && !p.archived).length + (trim?.ready && Array.isArray(trim.incoming) ? trim.incoming.length : 0), wishes = D.wish.filter((w) => !w.got).length;
     const t = (href, ic, name, sub) => `<a class="more-t" href="#${href}" data-act="close-more">${svg(ic)}<b>${name}</b><small>${sub}</small></a>`;
+    const nx = upcoming(1)[0];
     sheet(`<div class="more-h">Everything</div><div class="more-g">
-      ${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
-      ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}${t("guns", "shield", "Gun Vault", GV.data && !GV.data.error ? `${GV.data.firearms.length} firearms` : "Safe Ledger")}
+      ${t("cal", "cal", "Calendar", nx ? esc(nx[1].title).slice(0, 18) : "Nothing soon")}${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
+      ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}
       </div>`);
     document.getElementById("modal")?.classList.add("more-modal");
   }
@@ -136,7 +138,7 @@
   let lastRoute = null;
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
     $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
@@ -304,6 +306,8 @@
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
+      ${(() => { const up = upcoming(3); return `<a class="lux lux-sm" href="#cal" style="--i:1"><div class="lux-h"><span>Calendar</span><span class="chev">›</span></div>
+        ${up.length ? up.map(([d, e]) => `<div class="hc-row"><span class="cal-bar" style="background:${(KIND[e.kind] || KIND.other)[1]}"></span><span class="hc-when">${esc(dayLabel(d).replace(/^(\w+day), /, ""))}<small>${clk(e.time)}</small></span><span class="hc-t">${esc(e.title)}</span></div>`).join("") : `<div class="sub">Nothing coming up. Tap to add.</div>`}</a>`; })()}
       <a class="lux lux-sm" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
       <div class="quad">
         ${box("todo", "check", "To-Do", open.length, late ? `<em>${late} due</em>${esc(open[0]?.text || "")}` : nextTodo, 2)}
@@ -1072,6 +1076,98 @@
   async function pwAutoCats(force) { let n = 0; for (const x of PW.vault.items) if (!x.cat) { x.cat = pwCatGuess(x); n++; } if (n || force) await pwPersist().catch((e) => toast(e.message)); return n; }
   const newPwId = () => b64e(crypto.getRandomValues(new Uint8Array(9))).replace(/[+/=]/g, "x");
 
+  // ---------- Calendar ----------
+  const KIND = { work: ["Work", "#d4af37"], med: ["Medication", "#6fd58f"], appt: ["Appointment", "#8fb8ff"], personal: ["Personal", "#e7a6ff"], bill: ["Bill", "#ff9a6b"], other: ["Other", "#bdb39b"] };
+  const REMS = [[0, "At time"], [15, "15 min"], [30, "30 min"], [60, "1 hour"], [120, "2 hours"], [1440, "24 hours"], [2880, "2 days"], [10080, "1 week"]];
+  const REP = [["none", "Doesn’t repeat"], ["daily", "Every day"], ["weekdays", "Weekdays"], ["weekly", "Every week"], ["biweekly", "Every 2 weeks"], ["monthly", "Every month"], ["yearly", "Every year"]];
+  const CAL = { month: null, sel: null };
+  const dkey = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  const dAdd = (d, n) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + n); return dkey(t); };
+  const dDow = (d) => new Date(d + "T12:00:00").getDay();
+  function occOn(ev, d) {
+    if (!ev.date || d < ev.date || (ev.until && d > ev.until)) return false;
+    switch (ev.repeat) {
+      case "daily": return true;
+      case "weekdays": { const w = dDow(d); return w > 0 && w < 6; }
+      case "weekly": return dDow(d) === dDow(ev.date);
+      case "biweekly": return dDow(d) === dDow(ev.date) && Math.round((new Date(d + "T12:00:00") - new Date(ev.date + "T12:00:00")) / 864e5) % 14 === 0;
+      case "monthly": return d.slice(8) === ev.date.slice(8);
+      case "yearly": return d.slice(5) === ev.date.slice(5);
+      default: return d === ev.date;
+    }
+  }
+  const evOn = (d) => (D.events || []).filter((e) => occOn(e, d)).sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+  const clk = (t) => { if (!t) return "All day"; const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+  const dayLabel = (d) => { const t = todayKey(); if (d === t) return "Today"; if (d === dAdd(t, 1)) return "Tomorrow"; if (d === dAdd(t, -1)) return "Yesterday"; return new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }); };
+  function upcoming(n = 3, days = 21) {
+    const out = [], now = new Date(), t = todayKey(), hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    for (let i = 0; i <= days && out.length < n; i++) { const d = dAdd(t, i); for (const e of evOn(d)) { if (i === 0 && e.time && (e.end || e.time) < hm) continue; if ((e.done || []).includes(d) || out.some(([, x]) => x.id === e.id)) continue; out.push([d, e]); if (out.length >= n) break; } }
+    return out;
+  }
+  const evRow = (d, e) => { const done = (e.done || []).includes(d), [kn, kc] = KIND[e.kind] || KIND.other;
+    return `<div class="item cal-ev ${done ? "done" : ""}" data-act="ev-open" data-id="${e.id}|${d}"><span class="cal-bar" style="background:${kc}"></span>
+      <div class="cal-time">${clk(e.time)}${e.end ? `<small>${clk(e.end)}</small>` : ""}</div>
+      <div class="grow"><div class="t">${esc(e.title)}</div><div class="sub">${esc(kn)}${e.location ? " · " + esc(e.location) : ""}${e.repeat !== "none" ? " · ↻" : ""}${(e.reminders || []).length ? " · 🔔" : ""}</div></div>
+      ${e.kind === "med" ? `<button class="btn ${done ? "" : "ghost"} sm" data-act="ev-done" data-id="${e.id}|${d}">${done ? "✓ Taken" : "Taken"}</button>` : ""}</div>`; };
+
+  function pCal() {
+    const t = todayKey(); CAL.sel = CAL.sel || t; CAL.month = CAL.month || t.slice(0, 7);
+    const head = top("Calendar", `<button class="btn ghost sm" data-act="ev-new">+ Add</button>`);
+    const [y, m] = CAL.month.split("-").map(Number), first = new Date(y, m - 1, 1), start = dAdd(dkey(first), -first.getDay());
+    const title = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    let cells = "";
+    for (let i = 0; i < 42; i++) {
+      const d = dAdd(start, i), evs = evOn(d), inM = d.slice(0, 7) === CAL.month;
+      if (i === 35 && !inM) break;
+      cells += `<button class="cal-d ${inM ? "" : "out"} ${d === t ? "today" : ""} ${d === CAL.sel ? "sel" : ""}" data-act="cal-day" data-id="${d}"><span>${+d.slice(8)}</span><i>${[...new Set(evs.map((e) => e.kind))].slice(0, 3).map((k) => `<b style="background:${(KIND[k] || KIND.other)[1]}"></b>`).join("")}</i></button>`;
+    }
+    const grid = `<div class="lux cal-card" style="--i:0"><div class="cal-top"><button class="icon" data-act="cal-mo" data-id="-1">‹</button><div class="cal-mo">${title}</div><button class="icon" data-act="cal-mo" data-id="1">›</button></div>
+      <div class="cal-w">${["S", "M", "T", "W", "T", "F", "S"].map((x) => `<span>${x}</span>`).join("")}</div><div class="cal-g">${cells}</div>
+      ${CAL.month !== t.slice(0, 7) || CAL.sel !== t ? `<button class="cal-today" data-act="cal-day" data-id="${t}">Back to today</button>` : ""}</div>`;
+    const evs = evOn(CAL.sel);
+    const day = `<h3 class="pw-h" style="margin-top:20px">${esc(dayLabel(CAL.sel))} <span>${evs.length || ""}</span></h3>${evs.length ? `<div class="list">${evs.map((e) => evRow(CAL.sel, e)).join("")}</div>` : `<div class="empty" style="padding:18px">Nothing scheduled. <button class="icon" data-act="ev-new" style="color:var(--gold2);font-size:15px">Add something</button></div>`}`;
+    const up = upcoming(6, 30).filter(([d]) => d !== CAL.sel);
+    const next = up.length ? `<h3 class="pw-h">Coming up</h3><div class="list">${up.map(([d, e]) => evRow(d, e).replace('<div class="cal-time">', `<div class="cal-time"><small class="cal-when">${esc(dayLabel(d).replace(/^(\w+day), /, ""))}</small>`)).join("")}</div>` : "";
+    const perm = typeof Notification !== "undefined" ? Notification.permission : "default";
+    const alerts = perm === "granted" ? "" : `<div class="card" style="margin-top:16px"><div class="row"><div class="grow"><div style="font-weight:600">Reminders on this phone</div><div class="sub">${pushState()}</div></div><button class="btn sm" data-act="push-on">Turn on</button></div></div>`;
+    return head + grid + day + next + alerts;
+  }
+
+  function evForm(e = {}, d) {
+    const r = e.reminders || [0, 1440];
+    sheet(`<h2>${e.id ? "Edit" : "New"} event</h2><form data-form="ev-save" data-id="${e.id || ""}">
+      <label>Title</label><input name="title" value="${esc(e.title)}" placeholder="e.g. District meeting, Take meds" required>
+      <label>Type</label><div class="cal-kinds">${Object.entries(KIND).map(([k, [n, c]]) => `<label class="cal-kind"><input type="radio" name="kind" value="${k}" ${(e.kind || "work") === k ? "checked" : ""}><span style="--c:${c}">${n}</span></label>`).join("")}</div>
+      <div class="gv-efs" style="margin-top:6px"><div class="gv-ef" style="grid-column:1/-1"><label>Date</label><input type="date" name="date" value="${esc(e.date || d || todayKey())}" required></div>
+      <div class="gv-ef"><label>Start</label><input type="time" name="time" value="${esc(e.time || "")}"></div><div class="gv-ef"><label>End</label><input type="time" name="end" value="${esc(e.end || "")}"></div></div>
+      <div class="sub" style="margin:-2px 0 4px">Leave Start empty for an all-day item (reminders go at 9 AM).</div>
+      <div class="gv-efs"><div class="gv-ef"><label>Repeat</label><select name="repeat">${REP.map(([k, n]) => `<option value="${k}" ${(e.repeat || "none") === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div class="gv-ef"><label>Until (optional)</label><input type="date" name="until" value="${esc(e.until || "")}"></div></div>
+      <label>Remind me</label><div class="cal-rems">${REMS.map(([v, n]) => `<label class="cal-rem"><input type="checkbox" name="rem" value="${v}" ${r.includes(v) ? "checked" : ""}><span>${n}</span></label>`).join("")}</div>
+      <label>Location</label><input name="location" value="${esc(e.location || "")}">
+      <label>Notes</label><textarea name="notes">${esc(e.notes || "")}</textarea>
+      <div class="actions">${e.id ? `<button type="button" class="btn danger" data-act="ev-del" data-id="${e.id}">Delete</button>` : ""}<span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
+    document.querySelectorAll('form[data-form="ev-save"] [name=kind]').forEach((x) => x.addEventListener("change", () => { if (x.value === "med" && !e.id) { const f = x.form; f.repeat.value = "daily"; f.querySelectorAll("[name=rem]").forEach((c) => (c.checked = c.value === "0")); } }));
+  }
+  function evOpen(id, d) {
+    const e = (D.events || []).find((x) => x.id === id); if (!e) return;
+    const [kn, kc] = KIND[e.kind] || KIND.other, done = (e.done || []).includes(d);
+    const rem = (e.reminders || []).map((v) => (REMS.find(([x]) => x === v) || [, v + " min"])[1]).join(", ") || "None";
+    sheet(`<div class="cal-dh"><span class="cal-bar" style="background:${kc}"></span><div><h2 style="margin:0">${esc(e.title)}</h2><div class="sub">${esc(kn)}</div></div></div>
+      <div class="gv-kv"><span>When</span><b>${esc(dayLabel(d))} · ${clk(e.time)}${e.end ? "–" + clk(e.end) : ""}</b></div>
+      ${e.repeat !== "none" ? `<div class="gv-kv"><span>Repeats</span><b>${esc(REP.find(([k]) => k === e.repeat)[1])}${e.until ? " until " + esc(e.until) : ""}</b></div>` : ""}
+      <div class="gv-kv"><span>Reminders</span><b>${esc(rem)}</b></div>
+      ${e.location ? `<div class="gv-kv"><span>Where</span><b><a href="https://maps.apple.com/?q=${encodeURIComponent(e.location)}" target="_blank" rel="noopener" style="color:var(--gold2)">${esc(e.location)}</a></b></div>` : ""}
+      ${e.notes ? `<div class="gv-notes" style="margin-top:12px">${esc(e.notes)}</div>` : ""}
+      <div class="actions">${e.kind === "med" ? `<button class="btn ${done ? "" : "ghost"}" data-act="ev-done" data-id="${e.id}|${d}">${done ? "✓ Taken" : "Mark taken"}</button>` : ""}${e.repeat !== "none" ? `<button class="btn ghost" data-act="ev-skip" data-id="${e.id}|${d}">Skip this one</button>` : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Close</button><button class="btn" data-act="ev-edit" data-id="${e.id}">Edit</button></div>`);
+  }
+  async function evToggleDone(id, d, skip) {
+    const e = D.events.find((x) => x.id === id); if (!e) return;
+    const done = new Set(e.done || []); done.has(d) && !skip ? done.delete(d) : done.add(d);
+    await save("events", { ...e, done: [...done] });
+    if (skip) toast("Skipped");
+  }
+
   // ---------- Gerald ----------
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
@@ -1104,7 +1200,7 @@
       const pw = PW.key ? PW.vault.items.map((x) => ({ id: x.id, t: x.title, u: x.user, h: host(x.url), c: x.cat || "" })) : PW.meta && !PW.meta.empty ? "locked" : null;
       const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
-      if (r.changed) { D = { todo: [], wish: [], pkgs: [], status: {}, ...(await api("all")) }; render(); }
+      if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; render(); }
     } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
     chat.busy = false;
     if (document.getElementById("gmodal")) { openGerald(); document.querySelector("#gmodal input[name=q]")?.focus(); }
@@ -1174,6 +1270,14 @@
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
         case "more": e.preventDefault(); moreSheet(); break;
+        case "cal-day": CAL.sel = id; CAL.month = id.slice(0, 7); render(); break;
+        case "cal-mo": { const [yy, mm] = CAL.month.split("-").map(Number), t2 = new Date(yy, mm - 1 + +id, 1); CAL.month = dkey(t2).slice(0, 7); render(); break; }
+        case "ev-new": evForm({}, route() === "cal" ? CAL.sel : todayKey()); break;
+        case "ev-open": { const [i, d] = id.split("|"); evOpen(i, d); break; }
+        case "ev-edit": evForm(D.events.find((x) => x.id === id)); break;
+        case "ev-done": { const [i, d] = id.split("|"); await evToggleDone(i, d); if (document.getElementById("modal")) evOpen(i, d); break; }
+        case "ev-skip": { const [i, d] = id.split("|"); await evToggleDone(i, d, true); closeSheet(); break; }
+        case "ev-del": if (confirmDel()) { await remove("events", id); closeSheet(); toast("Deleted"); } break;
         case "close-more": closeSheet(); break;
         case "pw-lock": pwLock(); break;
         case "pw-cat": PW.cat = PW.cat === id ? "" : id; render(); break;
@@ -1223,6 +1327,9 @@
       switch (f.dataset.form) {
         case "gerald": f.reset(); askGerald(v.q); break;
         case "gv-save": await gvSubmit(f); break;
+        case "ev-save": { const fd = new FormData(f); const body = { title: v.title, kind: fd.get("kind") || "other", date: v.date, time: v.time, end: v.end, repeat: v.repeat, until: v.until, location: v.location, notes: v.notes, reminders: fd.getAll("rem").map(Number) };
+          const old = f.dataset.id && D.events.find((x) => x.id === f.dataset.id); await save("events", { ...(old || {}), ...body, ...(old ? { id: old.id } : {}) }); closeSheet(); CAL.sel = body.date; CAL.month = body.date.slice(0, 7);
+          if (typeof Notification !== "undefined" && Notification.permission !== "granted" && body.reminders.length) toast("Turn on reminders on the Calendar page to get alerts"); else toast("Saved"); break; }
         case "pw-create": case "pw-unlock": case "pw-save": case "pw-newmaster": await pwSubmit(f, v); break;
         case "pv-album": {
           if (id) { const r = await api(`vault/albums/${id}`, { method: "PUT", body: { name: v.name } }); PV.album = { ...PV.album, name: r.name }; }
