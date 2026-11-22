@@ -22,7 +22,22 @@ async function finLogin(s) {
   await s.setJSON("meta/fin-token", { token: d.token, at: Date.now() });
   return d.token;
 }
-export async function moneyData(s, txLimit = 60) {
+// Ask Blumenfeld Finance to pull fresh balances/transactions from Plaid (same as opening that app).
+export async function finSync(s) {
+  if (!env("FINANCE_PIN")) return { ok: false, why: "no pin" };
+  let tok = (await s.get("meta/fin-token", { type: "json" }))?.token || (await finLogin(s));
+  const post = (t) => fetch(FIN() + "/api/plaid/sync", { method: "POST", headers: { authorization: "Bearer " + t, "content-type": "application/json" }, body: "{}", signal: AbortSignal.timeout(25000) });
+  let r = await post(tok);
+  if (r.status === 401) r = await post((tok = await finLogin(s)));
+  const d = await r.json().catch(() => ({}));
+  const errors = (d.results || []).filter((x) => x && x.error).map((x) => ({ bank: x.institution || x.name || x.item || "A bank", error: String(x.error).slice(0, 160) }));
+  await s.setJSON("meta/fin-sync", { at: Date.now(), ok: r.ok, errors });
+  return { ok: r.ok, errors, status: r.status };
+}
+
+export async function moneyData(s, txLimit = 60, opts = {}) {
+  let synced = null;
+  if (opts.sync) { try { synced = await finSync(s); } catch (e) { synced = { ok: false, errors: [{ bank: "Sync", error: String(e.message || e).slice(0, 160) }] }; } }
   if (!env("FINANCE_PIN")) return ({ ready: false, why: "Add FINANCE_PIN (your Blumenfeld Finance PIN) on the blumenfeld-life project" });
   try {
     let tok = (await s.get("meta/fin-token", { type: "json" }))?.token || (await finLogin(s));
@@ -39,7 +54,8 @@ export async function moneyData(s, txLimit = 60) {
     const transactions = (d.transactions || []).slice().sort((x, y) => String(y.date).localeCompare(String(x.date))).slice(0, txLimit)
       .map((t) => ({ name: t.name, date: t.date, amount: t.amount, pending: !!t.pending, account: acct[t.accountId] ? `${acct[t.accountId].name}${acct[t.accountId].mask ? " ··" + acct[t.accountId].mask : ""}` : "" }));
     const sum = (f) => A.filter(f).reduce((t, a) => t + (+bal(a) || 0), 0);
-    return ({ ready: true, lastSync: d.lastSync || null, cash: sum((a) => a.type === "depository"), credit: sum((a) => a.type === "credit"), accounts, transactions });
+    const ss = synced || (await s.get("meta/fin-sync", { type: "json" })) || {};
+    return ({ ready: true, lastSync: d.lastSync || null, syncErrors: ss.errors || [], syncFailed: synced ? !synced.ok : false, cash: sum((a) => a.type === "depository"), credit: sum((a) => a.type === "credit"), accounts, transactions });
   } catch (e) {
     return ({ ready: false, why: String(e.message || e).slice(0, 200) });
   }

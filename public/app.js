@@ -517,8 +517,8 @@
 
   // ---------- Money ----------
   function pMoney() {
-    const head = top("Money", `<button class="btn ghost sm" data-act="money-refresh">Refresh</button>`);
-    if (!money) return head + `<div class="empty">Loading…</div>`;
+    const head = top("Money", `<button class="btn ghost sm" data-act="money-refresh">${money?.syncing ? "Syncing…" : "Sync banks"}</button>`);
+    if (!money || (money.syncing && !money.ready)) return head + `<div class="empty">${money?.syncing ? "Syncing with your banks…" : "Loading…"}</div>`;
     if (!money.ready) return head + `<div class="card"><div style="font-weight:600">Bank + Venmo</div><div class="sub">${esc(money.why)}. Balances and transactions will come straight from Blumenfeld Finance’s Plaid connections.</div></div>`;
     const accts = money.accounts || [];
     const grp = (t) => accts.filter((a) => a.type === t);
@@ -526,7 +526,8 @@
     const tx = (money.transactions || []).slice(0, 40);
     return head + `<div class="stats" style="margin-top:12px"><div class="stat"><div class="k">Cash</div><div class="v money">${usd(money.cash ?? 0)}</div></div>
       <div class="stat"><div class="k">Credit owed</div><div class="v money">${usd(money.credit ?? 0)}</div></div></div>
-      ${money.lastSync ? `<div class="sub" style="margin-top:6px">Banks last synced ${ago(Date.parse(money.lastSync))} · Sync from Blumenfeld Finance</div>` : ""}
+      ${money.lastSync ? `<div class="sub" style="margin-top:6px">Banks last synced ${ago(Date.parse(money.lastSync))} · syncs automatically every 2 hours</div>` : ""}
+      ${(money.syncErrors || []).length ? `<div class="card" style="margin-top:10px;border-color:rgba(255,122,107,.5)"><b style="color:#ff9585">Needs attention</b>${money.syncErrors.map((x) => `<div class="sub" style="margin-top:4px">${esc(x.bank)}: ${esc(x.error)}</div>`).join("")}<div class="sub" style="margin-top:6px">Open Blumenfeld Finance and reconnect that bank.</div></div>` : ""}
       ${["depository", "credit", "other"].map((t) => grp(t).length ? `<h3>${{ depository: "Bank & Venmo", credit: "Credit cards", other: "Other" }[t]}</h3><div class="list">${grp(t).map(acct).join("")}</div>` : "").join("")}
       ${tx.length ? `<h3>Recent</h3><div class="list">${tx.map((x) => `<div class="item"><div class="grow"><div class="t">${esc(x.name)}</div><div class="sub">${esc(x.date)}${x.pending ? " · pending" : ""} · ${esc(x.account || "")}</div></div><div class="money" style="color:${x.amount < 0 ? "var(--good)" : "var(--text)"}">${x.amount < 0 ? "+" : "−"}${usd(Math.abs(x.amount))}</div></div>`).join("")}</div>` : ""}`;
   }
@@ -1256,7 +1257,8 @@
         case "po-open": ui.open["po" + id] = !ui.open["po" + id]; render(); break;
         case "in-tab": ui.inTab = id; render(); break;
         case "trim-refresh": trim = null; render(); loadTrim(); break;
-        case "money-refresh": money = null; render(); loadMoney(); break;
+        case "money-refresh": { if (money?.syncing) break; money = { ...(money || {}), syncing: true }; render();
+          try { money = await api("money?sync=1"); toast(money.syncFailed ? "Bank sync didn’t finish — showing last data" : money.syncErrors?.length ? `${money.syncErrors.length} bank(s) need attention` : "Banks synced"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } render(); break; }
         case "pkg-check": {
           el.disabled = true; el.textContent = "Checking…";
           const r = await api("pkgs/check", { method: "POST" });

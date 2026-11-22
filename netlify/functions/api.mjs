@@ -90,7 +90,7 @@ export default async (req) => {
     }
 
     if (parts[0] === "trim") return json(await trimData());
-    if (parts[0] === "money") return json(await moneyData(s));
+    if (parts[0] === "money") return json(await moneyData(s, 60, { sync: !!new URL(req.url).searchParams.get("sync") }));
     if (parts[0] === "vault") return vault(req, s, parts.slice(1));
     if (parts[0] === "gv") return gunvault(req, s, parts.slice(1));
     if (parts[0] === "pw" && !parts[1]) return passwords(req, s);
