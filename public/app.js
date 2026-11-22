@@ -192,13 +192,13 @@
         ${sub(c, cy - 52, "subM", ["30", "10", "20"], 30)}
         ${sub(c - 52, cy, "subS", ["60", "20", "40"], 60)}
         ${sub(c, cy + 52, "subH", ["12", "3", "6", "9"], 24)}
-        <rect x="${c + 50}" y="${cy - 7.5}" width="22" height="15" rx="1"/><rect x="${c + 73}" y="${cy - 7.5}" width="14" height="15" rx="1"/>
+        <rect x="${c + 30}" y="${cy - 7.5}" width="22" height="15" rx="1"/><rect x="${c + 53}" y="${cy - 7.5}" width="14" height="15" rx="1"/>
       </g>
       ${bez}
       <path id="tachArc" d="M ${P(9, 118.5)[0]} ${P(9, 118.5)[1]} A 118.5 118.5 0 0 1 ${P(38, 118.5)[0]} ${P(38, 118.5)[1]}" fill="none"/>
       <text font-size="7" letter-spacing="1.5" fill="${G2}" font-family="${F}" dy="2.6"><textPath href="#tachArc">BLUMENFELD</textPath></text>
-      <text id="wDay" x="${c + 61}" y="${cy + 3}" text-anchor="middle" font-size="7.5" fill="${G2}" font-family="${F}">MON</text>
-      <text id="wDate" x="${c + 80}" y="${cy + 3}" text-anchor="middle" font-size="8" fill="${G2}" font-family="${F}">1</text>
+      <text id="wDay" x="${c + 41}" y="${cy + 3}" text-anchor="middle" font-size="7.5" fill="${G2}" font-family="${F}">MON</text>
+      <text id="wDate" x="${c + 60}" y="${cy + 3}" text-anchor="middle" font-size="8" fill="${G2}" font-family="${F}">1</text>
       ${hand("hh", 60, 4.6)}${hand("mm", 92, 3.6)}
       <g id="cs"><line x1="${c}" y1="${cy + 24}" x2="${c}" y2="${cy - 96}" stroke="${G2}" stroke-width="1" stroke-linecap="round"/><path d="M${c - 2.2} ${cy - 84} L${c} ${cy - 96} L${c + 2.2} ${cy - 84} Z" fill="${G2}"/><circle cx="${c}" cy="${cy + 18}" r="3.2" fill="none" stroke="${G2}" stroke-width="1"/></g>
       <circle cx="${c}" cy="${cy}" r="4.6" fill="none" stroke="${G2}" stroke-width="1.2"/><circle cx="${c}" cy="${cy}" r="1.3" fill="${G2}"/>
@@ -289,7 +289,6 @@
           <figure class="us"><picture><source srcset="/us.webp?v=6" type="image/webp"><img src="/us.png?v=6" alt="Jeff and Lindsey" draggable="false"></picture></figure>
           <div class="watch">${watchSVG()}</div>
         </div>
-        <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
