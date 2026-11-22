@@ -911,7 +911,8 @@
         <div class="grow"><div class="t">${esc(x.title)}</div><div class="sub">${esc(x.user || host(x.url) || "")}</div></div>
         <button class="btn ghost sm" data-act="pw-copy" data-id="${x.id}" data-f="pass">Copy</button></div>`).join("")}</div>`
         : `<div class="empty">${PW.vault.items.length ? "No matches." : "No logins yet. Tap + Add."}</div>`}
-      <div class="sub" style="text-align:center;margin-top:18px">Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
+      <label class="btn ghost" style="display:block;text-align:center;margin-top:16px">Import from Chrome or Apple (CSV)<input type="file" accept=".csv,text/csv,text/comma-separated-values" data-pwimport hidden></label>
+      <div class="sub" style="text-align:center;margin-top:14px">Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
   }
   const pwItem = (id) => PW.vault.items.find((x) => x.id === id);
   function pwOpen(x) {
@@ -973,6 +974,46 @@
       await pwPersist(); closeSheet(); toast("Master password changed");
     }
   }
+
+  // Import a CSV export from Chrome / Google Password Manager or Apple Passwords. Read and encrypted on this phone only.
+  function parseCSV(t) {
+    const rows = []; let row = [], f = "", q = false;
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && t[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+      else f += c;
+    }
+    if (f || row.length) { row.push(f); rows.push(row); }
+    return rows.filter((r) => r.some((x) => x.trim()));
+  }
+  async function pwImport(file) {
+    if (!PW.key) return toast("Unlock first");
+    const rows = parseCSV((await file.text()).replace(/^\uFEFF/, ""));
+    if (rows.length < 2) return toast("That file has no passwords");
+    const h = rows[0].map((x) => x.trim().toLowerCase()), col = (...names) => h.findIndex((x) => names.includes(x));
+    const iT = col("name", "title"), iU = col("url", "website", "login_uri"), iN = col("username", "login_username", "login"), iP = col("password", "login_password"), iX = col("note", "notes");
+    if (iP < 0) return toast("Couldn’t find a password column in that file");
+    const seen = new Set(PW.vault.items.map((x) => [host(x.url) || x.title, x.user, x.pass].join("|")));
+    let added = 0, dup = 0;
+    for (const r of rows.slice(1)) {
+      const url = (r[iU] || "").trim(), pass = r[iP] || "", user = (r[iN] || "").trim();
+      if (!pass && !user) continue;
+      const title = ((iT >= 0 && r[iT]) || host(url) || "Login").trim().replace(/^www\./, "");
+      const sig = [host(url) || title, user, pass].join("|");
+      if (seen.has(sig)) { dup++; continue; }
+      seen.add(sig);
+      PW.vault.items.push({ id: newPwId(), title, user, pass, url, notes: iX >= 0 ? r[iX] || "" : "", at: Date.now() });
+      added++;
+    }
+    if (added) await pwPersist();
+    render();
+    sheet(`<h2>Import done</h2><div class="sub" style="font-size:16px;color:#efe6cf">${added} login${added === 1 ? "" : "s"} added${dup ? ` · ${dup} duplicate${dup === 1 ? "" : "s"} skipped` : ""}.</div>
+      <div class="card" style="margin-top:14px;border-color:rgba(255,122,107,.5)"><b style="color:#ff9585">Delete the export file now.</b><div class="sub" style="margin-top:6px">It holds every password in plain text. Delete it from Files (and Recently Deleted), Downloads, and anywhere you sent or saved it.</div></div>
+      <div class="actions"><span class="sp"></span><button class="btn" data-act="close">Done</button></div>`);
+  }
+  document.addEventListener("change", (e) => { if (e.target.matches("input[data-pwimport]")) { const f = e.target.files[0]; e.target.value = ""; if (f) pwImport(f).catch((x) => toast(x.message)); } });
   const newPwId = () => b64e(crypto.getRandomValues(new Uint8Array(9))).replace(/[+/=]/g, "x");
 
   // ---------- Gerald ----------
