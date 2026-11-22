@@ -17,6 +17,10 @@
 --acc:#d4af37;--good:#6fd58f;--bad:#ff7a6b;--warn:#f2c14e;--blue:#8fb8ff;--r:18px;--tab:74px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;overflow-x:hidden;max-width:100%;background:#050505;color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+/* Every page fills the full screen so iOS home-screen apps pin the tab bar to the real bottom */
+html{height:100%;min-height:-webkit-fill-available}
+body{min-height:100vh;min-height:-webkit-fill-available;min-height:100dvh;box-sizing:border-box}
+main{min-height:calc(100dvh - var(--tab) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 18px)}
 /* Carbon fiber weave, fixed behind everything */
 #cf{position:fixed;inset:0;z-index:-2;background-color:#161616;
 background-image:
@@ -225,7 +229,7 @@ main h1::before{content:attr(data-eyebrow);display:block;font:600 11px/1 -apple-
 .duefield input{border:0;background:transparent;box-shadow:none;padding:11px 8px;min-height:44px;flex:1;text-align:right;color:var(--gold2)}
 .duefield input:focus{box-shadow:none}
 /* Bottom tabs */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,rgba(10,10,10,.75),rgba(4,4,4,.96));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-top:1px solid rgba(212,175,55,.3)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:30;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:linear-gradient(180deg,rgba(10,10,10,.75),rgba(4,4,4,.96));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border-top:1px solid rgba(212,175,55,.3)}
 nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);position:relative}
 nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#7d7564;text-decoration:none;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;transition:color .25s,transform .2s;position:relative;z-index:1}
 nav.tabs a svg{width:23px;height:23px;stroke:currentColor;transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .3s}
@@ -239,6 +243,6 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=29"></script>
+<script src="/app.js?v=30"></script>
 </body>
 </html>
