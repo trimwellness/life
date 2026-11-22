@@ -14,7 +14,7 @@
 <style>
 :root{--bg:#070707;--card:rgba(14,14,14,.82);--card2:rgba(28,26,22,.9);--line:rgba(212,175,55,.22);--text:#f3ede0;--mute:#9a927f;
 --gold:#d4af37;--gold2:#f6dd8c;--gold3:#a87a1e;--goldg:linear-gradient(135deg,#a87a1e 0%,#f6dd8c 28%,#c9982c 52%,#fbe7a1 72%,#a87a1e 100%);
---acc:#d4af37;--good:#6fd58f;--bad:#ff7a6b;--warn:#f2c14e;--blue:#8fb8ff;--r:18px;--tab:74px}
+--acc:#d4af37;--good:#6fd58f;--bad:#ff7a6b;--warn:#f2c14e;--blue:#8fb8ff;--r:18px;--tab:78px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;overflow-x:hidden;max-width:100%;background:#050505;color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 /* Every page fills the full screen so iOS home-screen apps pin the tab bar to the real bottom */
@@ -123,10 +123,10 @@ a.btn{text-decoration:none;display:inline-block}
 .wdate{text-align:center;color:var(--gold);font-size:12px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:10px}
 /* ---- Home: executive ---- */
 .hero{position:relative;overflow-x:clip;display:flex;flex-direction:column;align-items:center;padding:0;margin:-6px -16px 0}
-.hero .spot{position:absolute;left:50%;top:50%;margin-top:calc(min(80vw,360px) / -2);width:min(80vw,360px);height:min(80vw,360px);transform:translateX(-50%);border-radius:50%;
+.hero .spot{position:absolute;left:50%;top:50%;margin-top:calc(min(64vw,280px) / -2);width:min(64vw,280px);height:min(64vw,280px);transform:translateX(-50%);border-radius:50%;
   background:radial-gradient(circle,rgba(212,175,55,.16) 0%,rgba(212,175,55,.05) 38%,transparent 66%);pointer-events:none}
 @keyframes breathe{50%{opacity:.6;transform:translateX(-50%) scale(.96)}}
-.duo{position:relative;width:100%;height:clamp(250px,68vw,300px);overflow:clip;--W:min(70vw,290px)}
+.duo{position:relative;width:100%;height:clamp(196px,53vw,236px);overflow:clip;--W:min(55vw,228px)}
 .combo{position:relative;height:100%;width:calc(var(--W) * 1.17);margin:0 auto;transform:translateX(calc(var(--W) * .0737))}
 .us{margin:0;position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:2;width:calc(var(--W) * .44)}
 .us img{display:block;width:100%;height:auto;filter:drop-shadow(6px 10px 14px rgba(0,0,0,.85)) saturate(1.05);-webkit-touch-callout:none;user-select:none;pointer-events:none}
@@ -345,11 +345,52 @@ nav.tabs .ind{position:absolute;top:-9px;height:2px;width:20%;background:var(--g
 .pw-dh .pw-av{margin-right:0;width:46px;height:46px}
 .pw-dh .pw-av.logo img{width:30px;height:30px}
 .mono{font-family:ui-monospace,Menlo,monospace;letter-spacing:.03em}
+
+/* Tab bar v2: floating black-glass capsule */
+nav.tabs{left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 8px);padding:6px;border:1px solid rgba(212,175,55,.38);border-radius:26px;background:linear-gradient(180deg,rgba(22,20,15,.82),rgba(6,6,5,.94));box-shadow:0 18px 40px -10px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,236,190,.08)}
+nav.tabs .in{max-width:560px}
+nav.tabs a{padding:7px 0 6px;font-size:9.5px;letter-spacing:.1em;gap:3px}
+nav.tabs a svg{width:21px;height:21px}
+nav.tabs a.on svg{transform:none;filter:none}
+nav.tabs a.on{color:#1a1306}
+nav.tabs .ind{top:0;bottom:0;height:auto;width:calc(20% - 8px);border-radius:20px;background:var(--goldg);box-shadow:0 4px 16px rgba(212,175,55,.35)}
+body{padding-bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 22px)}
+.gfab{bottom:calc(env(safe-area-inset-bottom) + var(--tab) + 10px)}
+.more-modal .sheet{padding-top:16px}
+.more-h{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold);font-weight:600;margin:2px 4px 14px}
+.more-g{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.more-t{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 12px;border-radius:18px;text-decoration:none;color:inherit;background:linear-gradient(180deg,rgba(28,25,19,.94),rgba(9,9,8,.96)) padding-box,linear-gradient(160deg,rgba(246,221,140,.5),rgba(168,122,30,.1) 45%,rgba(246,221,140,.3)) border-box;border:1px solid transparent;animation:up .35s both}
+.more-t svg{width:22px;height:22px;stroke:var(--gold2);margin-bottom:6px}
+.more-t b{font:400 16px/1.15 "Didot","Bodoni 72",Georgia,serif;color:#f6efdc}
+.more-t small{font-size:11.5px;color:#8d8471}
+.more-t:active{transform:scale(.96)}
+/* Trim, compact */
+.lux-sm{padding:14px 16px 12px}
+.lux-sm .lux-h{margin-bottom:8px}
+.tsm{display:flex;align-items:flex-end;gap:14px}
+.tsm-l{flex:none}
+.tsm-num{font:400 28px/1.05 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin:2px 0 4px;font-variant-numeric:lining-nums tabular-nums}
+.tsm .delta{font-size:12px;text-align:left}
+.tsm .delta small{display:inline;font-size:10px}
+.tsm-chart{flex:1;min-width:0;height:40px;margin:0 8px 4px 0}
+.tsm-cols{display:flex;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid rgba(212,175,55,.14);font-size:13px;color:#efe6cf;font-variant-numeric:tabular-nums}
+.tsm-cols i{font-style:normal;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8d8471;margin-right:4px}
+/* Gun Vault hero */
+.gv-h1{position:relative;z-index:2}
+.top{position:relative;z-index:3}
+.gv-hero{position:relative;margin:calc(-64px - env(safe-area-inset-top) - 10px) -16px 0;height:min(128vw,560px);overflow:hidden;z-index:0}
+.gv-hero img{width:100%;height:100%;object-fit:cover;object-position:62% 0%;display:block;-webkit-user-select:none;user-select:none}
+.gv-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,5,5,.7) 0%,rgba(5,5,5,0) 18%,rgba(5,5,5,0) 50%,rgba(5,5,5,.8) 80%,#050505 100%),linear-gradient(90deg,rgba(5,5,5,.55),rgba(5,5,5,0) 55%);z-index:1}
+.gv-eb{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.gv-title{font:400 46px/1.05 "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;margin-top:6px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
+.gv-hero-txt{position:absolute;left:20px;bottom:18px;z-index:2}
+.gv-hero-txt .hero-num{font-size:34px;text-shadow:0 4px 18px rgba(0,0,0,.8)}
+.gv-sum{margin-top:4px;padding:14px 16px}
 </style>
 </head>
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=37"></script>
+<script src="/app.js?v=38"></script>
 </body>
 </html>

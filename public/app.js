@@ -84,7 +84,8 @@
   // ---------- Routing ----------
   const route = () => location.hash.replace(/^#/, "").split("?")[0];
   window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim" || route() === "pkgs") loadTrim(); });
-  const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["todo", "To-Do", "check"], ["pkgs", "Incoming", "box"]];
+  const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["guns", "Vault", "shield"], ["more", "More", "grid"]];
+  const MORE = ["todo", "pkgs", "wish", "photos", "keys"];
   const ICON = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
@@ -93,6 +94,7 @@
     box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
     gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
     lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/>',
+    grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
   };
@@ -108,17 +110,27 @@
     if (!nav) {
       nav = document.createElement("nav");
       nav.className = "tabs";
-      nav.innerHTML = `<div class="in"><span class="ind"></span>${TABS.map(([r, n, ic]) => `<a href="#${r}" data-tab="${r}">${svg(ic)}<span>${n}</span></a>`).join("")}</div>`;
+      nav.innerHTML = `<div class="in"><span class="ind"></span>${TABS.map(([r, n, ic]) => r === "more" ? `<a href="#" data-act="more" data-tab="more">${svg(ic)}<span>${n}</span></a>` : `<a href="#${r}" data-tab="${r}">${svg(ic)}<span>${n}</span></a>`).join("")}</div>`;
       document.body.appendChild(nav);
       const fab = document.createElement("button");
       fab.className = "gfab"; fab.dataset.act = "gerald"; fab.setAttribute("aria-label", "Ask Gerald"); fab.innerHTML = "G";
       document.body.appendChild(fab);
     }
-    const r = route(), i = TABS.findIndex(([x]) => x === r);
-    nav.querySelectorAll("a").forEach((a) => a.classList.toggle("on", a.dataset.tab === r));
+    const r = route(), cur = MORE.includes(r) ? "more" : r, i = TABS.findIndex(([x]) => x === cur);
+    nav.querySelectorAll("a").forEach((a) => a.classList.toggle("on", a.dataset.tab === cur));
     const ind = nav.querySelector(".ind");
     ind.style.opacity = i < 0 ? 0 : 1;
-    if (i >= 0) ind.style.left = i * 20 + "%";
+    if (i >= 0) ind.style.left = `calc(${i * 20}% + 4px)`;
+  }
+  // "More": every other section in one sheet.
+  function moreSheet() {
+    const open = D.todo.filter((t) => !t.done).length, inc = D.pkgs.filter((p) => !p.delivered && !p.archived).length + (trim?.ready && Array.isArray(trim.incoming) ? trim.incoming.length : 0), wishes = D.wish.filter((w) => !w.got).length;
+    const t = (href, ic, name, sub) => `<a class="more-t" href="#${href}" data-act="close-more">${svg(ic)}<b>${name}</b><small>${sub}</small></a>`;
+    sheet(`<div class="more-h">Everything</div><div class="more-g">
+      ${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
+      ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}${t("guns", "shield", "Gun Vault", GV.data && !GV.data.error ? `${GV.data.firearms.length} firearms` : "Safe Ledger")}
+      </div>`);
+    document.getElementById("modal")?.classList.add("more-modal");
   }
 
   let lastRoute = null;
@@ -263,20 +275,17 @@
     let trimBody = `<div class="quiet">${esc(trim?.why || "Loading…")}</div>`;
     if (trim?.ready) {
       const wk = trim.week.filter((d) => d.day <= trim.today), max = Math.max(1, ...trim.week.map((d) => d.sales));
-      const W = 300, H = 64, pts = wk.map((d, i) => [(i / 6) * W, H - 6 - (d.sales / max) * (H - 14)]);
+      const W = 300, H = 40, pts = wk.map((d, i) => [(i / 6) * W, H - 6 - (d.sales / max) * (H - 14)]);
       const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
       const area = pts.length ? `${line} L${pts[pts.length - 1][0].toFixed(1)} ${H} L0 ${H} Z` : "";
       const last = pts[pts.length - 1] || [0, H];
       const diff = trim.wtd.sales - trim.lastWeekToDate.sales;
-      trimBody = `<div class="row" style="align-items:flex-end"><div class="grow"><div class="lbl">Today</div><div class="hero-num">${n(trim.daily.sales, "usd")}</div></div>
-        <div class="delta ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${usd(Math.abs(diff), false)}<small>vs last week</small></div></div>
-        <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4af37" stop-opacity=".35"/><stop offset="1" stop-color="#d4af37" stop-opacity="0"/></linearGradient></defs>
+      trimBody = `<div class="tsm"><div class="tsm-l"><div class="lbl">Today</div><div class="tsm-num">${n(trim.daily.sales, "usd")}</div>
+          <div class="delta ${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${usd(Math.abs(diff), false)} <small>vs last wk</small></div></div>
+        <svg class="chart tsm-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4af37" stop-opacity=".35"/><stop offset="1" stop-color="#d4af37" stop-opacity="0"/></linearGradient></defs>
           <path d="${area}" fill="url(#ga)" class="area"/><path d="${line}" fill="none" stroke="#f0d27a" stroke-width="1.6" class="draw" vector-effect="non-scaling-stroke"/>
-          <circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="#f6dd8c" class="dot"/></svg>
-        <div class="days">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<span class="${trim.week[i]?.day === trim.today ? "on" : ""}">${d}</span>`).join("")}</div>
-        <div class="cols"><div><div class="lbl">Week</div><div class="v">${usd(trim.wtd.sales, false)}</div></div>
-        <div><div class="lbl">Month</div><div class="v">${usd(trim.mtd.sales, false)}</div></div>
-        <div><div class="lbl">Year</div><div class="v">${usd(trim.ytd.sales, false)}</div></div></div>`;
+          <circle cx="${last[0]}" cy="${last[1]}" r="3" fill="#f6dd8c" class="dot"/></svg></div>
+        <div class="tsm-cols"><span><i>Wk</i> ${usd(trim.wtd.sales, false)}</span><span><i>Mo</i> ${usd(trim.mtd.sales, false)}</span><span><i>Yr</i> ${usd(trim.ytd.sales, false)}</span></div>`;
     }
 
     const box = (href, ic, title, val, sub, i, fmt) => `<a class="lux qbox" href="#${href}" style="--i:${i}"><div class="lux-h"><span>${title}</span><span class="aic">${svg(ic)}</span></div>
@@ -295,7 +304,7 @@
         <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
       <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
-      <a class="lux" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
+      <a class="lux lux-sm" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
       <div class="quad">
         ${box("todo", "check", "To-Do", open.length, late ? `<em>${late} due</em>${esc(open[0]?.text || "")}` : nextTodo, 2)}
         ${box("pkgs", "box", "Incoming", active.length + trimIn, nextPkg, 3)}
@@ -671,20 +680,20 @@
   const firearmName = (id) => gvFind("firearms", id)?.name || "";
 
   function pGuns() {
-    const head = top("Gun Vault", GV.data && !GV.data.error ? `<button class="btn ghost sm" data-act="gv-new">+ Add</button>` : "");
+    const head = top("Gun Vault", GV.data && !GV.data.error ? `<button class="btn ghost sm" data-act="gv-new">+ Add</button>` : "").replace(/<h1 [^>]*>Gun Vault<\/h1>/, GV.data && !GV.data.error ? "" : "$&");
     if (!GV.data) { setTimeout(loadGV, 0); return head + `<div class="empty">Loading…</div>`; }
     if (GV.data.error) return head + `<div class="empty">${esc(GV.data.error)}</div>`;
     const t = gvTotals(), d = GV.data, imp = GV.importing;
     const banner = imp ? `<div class="pv-prog"><i style="width:${imp.total ? Math.round(((imp.total - imp.left) / imp.total) * 100) : 4}%"></i><span>Bringing in your Safe Ledger${imp.total ? ` · ${imp.total - imp.left} of ${imp.total} files` : "…"}</span></div>` : "";
-    const sum = `<div class="lux" style="--i:0;margin-top:6px"><div class="lux-h"><span>Collection value</span><span class="aic">${svg("shield")}</span></div>
-      <div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div>
-      <div class="cols"><div><div class="lbl">Firearms</div><div class="v">${d.firearms.length} · ${usd(t.firearms, false)}</div></div>
+    const sum = `<section class="gv-hero"><picture><source srcset="/gv-hero.webp?v=1" type="image/webp"><img src="/gv-hero.jpg?v=1" alt="" draggable="false"></picture>
+      <div class="gv-hero-txt"><div class="gv-eb">Safe Ledger</div><div class="gv-title">Gun Vault</div><div class="lbl" style="color:var(--gold);margin-top:14px">Collection value</div><div class="hero-num"><span data-count="${Math.round(t.all)}" data-fmt="usd">${usd(t.all, false)}</span></div></div></section>
+      <div class="lux gv-sum" style="--i:0"><div class="cols" style="margin:0;padding:0;border:0"><div><div class="lbl">Firearms</div><div class="v">${d.firearms.length} · ${usd(t.firearms, false)}</div></div>
       <div><div class="lbl">NFA</div><div class="v">${d.nfa.length} · ${usd(t.nfa, false)}</div></div>
       <div><div class="lbl">Mags</div><div class="v">${magCount()} · ${usd(t.mags, false)}</div></div></div></div>`;
     const col = GV.tab, items = d[col] || [];
     const seg = `<div class="seg gv-seg">${GVC.map(([c, n]) => `<button class="${c === col ? "on" : ""}" data-act="gv-tab" data-id="${c}">${n}</button>`).join("")}</div>`;
     const sub = `<div class="gv-tot"><span>${items.length} ${GVC.find(([c]) => c === col)[1].toLowerCase()}${col === "mags" ? ` · ${magCount()} total` : ""}</span><span>${usd(t[col], false)}</span></div>`;
-    return head + banner + sum + seg + sub + (items.length ? `<div class="gv-list">${items.map((o, i) => gvCard(col, o, i)).join("")}</div>` : `<div class="empty">${imp ? "Importing…" : "Nothing here yet."}</div>`);
+    return head + sum + banner + seg + sub + (items.length ? `<div class="gv-list">${items.map((o, i) => gvCard(col, o, i)).join("")}</div>` : `<div class="empty">${imp ? "Importing…" : "Nothing here yet."}</div>`);
   }
 
   function gvSub(col, o) {
@@ -1164,6 +1173,8 @@
         case "pv-amenu": albumSheet(PV.album); break;
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
+        case "more": e.preventDefault(); moreSheet(); break;
+        case "close-more": closeSheet(); break;
         case "pw-lock": pwLock(); break;
         case "pw-cat": PW.cat = PW.cat === id ? "" : id; render(); break;
         case "pw-g": { if (!PW.key) { toast("Unlock Passwords first"); document.getElementById("gmodal")?.remove(); location.hash = "keys"; break; } const x = pwItem(id); if (x) pwOpen(x); else toast("That login isn’t here anymore"); break; }
