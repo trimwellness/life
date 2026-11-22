@@ -220,7 +220,7 @@
   const NY = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "numeric", weekday: "short" });
   const rot = (id, deg, x = WX, y = WY) => { const el = document.getElementById(id); if (el) el.setAttribute("transform", `rotate(${deg.toFixed(3)} ${x} ${y})`); };
   function tickWatch() {
-    if (document.getElementById("hh")) {
+    if (!document.hidden && document.getElementById("hh")) {
       const now = new Date(), p = Object.fromEntries(NY.formatToParts(now).map((x) => [x.type, x.value]));
       const beat = Math.floor(now.getMilliseconds() / 125) * 125;
       const s = +p.second + beat / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
@@ -233,9 +233,10 @@
       const w = document.getElementById("wDay"), wd = String(p.weekday || "").toUpperCase();
       if (w && w.textContent !== wd) w.textContent = wd;
     }
-    requestAnimationFrame(tickWatch);
+    // Hands only move in 1/8-second beats, so update 8 times a second instead of every frame.
+    setTimeout(tickWatch, 125 - (Date.now() % 125) + 2);
   }
-  requestAnimationFrame(tickWatch);
+  tickWatch();
 
   // ---------- Home ----------
   function pHome() {
