@@ -157,17 +157,18 @@
     const trackNums = Array.from({ length: 12 }, (_, i) => { const n = (i + 1) * 5, [x, y] = P(n * 6, 101); return n === 15 ? "" : `<text x="${x.toFixed(1)}" y="${(y + 2).toFixed(1)}" text-anchor="middle" font-size="5.4" fill="#3a3a3a" font-family="${F}">${n}</text>`; }).join("");
     for (let h = 0; h < 12; h++) {
       if (h === 3) continue; // day-date
-      const deg = h * 30, w = h % 3 === 0 ? 5.5 : 4.2;
-      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 96}" width="${w}" height="${h % 3 === 0 ? 17 : 14}" rx="1" fill="url(#gSteel)" stroke="#555" stroke-width=".4"/></g>`);
+      const deg = h * 30, w = h % 3 === 0 ? 3.6 : 2.8;
+      idx.push(`<g transform="rotate(${deg} ${c} ${c})"><rect x="${c - w / 2}" y="${c - 105}" width="${w}" height="${h % 3 === 0 ? 10 : 8}" rx=".8" fill="url(#gSteel)" stroke="#555" stroke-width=".35"/></g>`);
     }
+    const R = 34; // subdial radius
     const sub = (x, y, id, labels, marks) => {
       const t = [];
       for (let i = 0; i < marks; i++) { const rad = (i * 2 * Math.PI) / marks, big = i % (marks / labels.length) === 0;
-        t.push(`<line x1="${(x + 24 * Math.sin(rad)).toFixed(2)}" y1="${(y - 24 * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? 19 : 21.5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? 19 : 21.5) * Math.cos(rad)).toFixed(2)}" stroke="#e8e8e8" stroke-width="${big ? 1 : 0.45}"/>`); }
-      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + 14 * Math.sin(a)).toFixed(1)}" y="${(y - 14 * Math.cos(a) + 2.2).toFixed(1)}" text-anchor="middle" font-size="5.8" font-weight="600" fill="#f0f0f0" font-family="${F}">${l}</text>`; }).join("");
-      return `<circle cx="${x}" cy="${y}" r="27.5" fill="url(#gSteel)"/><circle cx="${x}" cy="${y}" r="26" fill="url(#gSub)"/>
-        ${Array.from({ length: 22 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${25 - i * 1.1}" fill="none" stroke="#fff" stroke-width=".25" opacity=".07"/>`).join("")}${t.join("")}${lab}
-        <g id="${id}"><line x1="${x}" y1="${y + 5}" x2="${x}" y2="${y - 21}" stroke="#fafafa" stroke-width="1.6" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="2.6" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
+        t.push(`<line x1="${(x + (R - 2) * Math.sin(rad)).toFixed(2)}" y1="${(y - (R - 2) * Math.cos(rad)).toFixed(2)}" x2="${(x + (big ? R - 8 : R - 5) * Math.sin(rad)).toFixed(2)}" y2="${(y - (big ? R - 8 : R - 5) * Math.cos(rad)).toFixed(2)}" stroke="#e8e8e8" stroke-width="${big ? 1.1 : 0.5}"/>`); }
+      const lab = labels.map((l, i) => { const a = (i * 2 * Math.PI) / labels.length; return `<text x="${(x + (R - 15) * Math.sin(a)).toFixed(1)}" y="${(y - (R - 15) * Math.cos(a) + 2.6).toFixed(1)}" text-anchor="middle" font-size="7" font-weight="600" fill="#f0f0f0" font-family="${F}">${l}</text>`; }).join("");
+      return `<circle cx="${x}" cy="${y}" r="${R + 1.8}" fill="url(#gSteel)"/><circle cx="${x}" cy="${y}" r="${R}" fill="url(#gSub)"/>
+        ${Array.from({ length: 28 }, (_, i) => `<circle cx="${x}" cy="${y}" r="${R - 1 - i * 1.1}" fill="none" stroke="#fff" stroke-width=".25" opacity=".07"/>`).join("")}${t.join("")}${lab}
+        <g id="${id}"><line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y - (R - 4)}" stroke="#fafafa" stroke-width="1.8" stroke-linecap="round"/><circle cx="${x}" cy="${y}" r="3" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>`;
     };
     return `<svg viewBox="0 0 300 300" aria-label="Watch" id="watchSvg" style="cursor:pointer">
       <defs>
@@ -182,21 +183,21 @@
       <circle cx="${c}" cy="${c}" r="149" fill="url(#gSteel)"/>
       <circle cx="${c}" cy="${c}" r="145" fill="url(#gBez)"/>
       ${bezTicks}${bez}
-      <text font-size="6.4" font-weight="700" letter-spacing="1.1" fill="#f2f2f2" font-family="${F}"><textPath href="#tachArc">TACHYMETRE</textPath></text>
+      <text font-size="6.4" font-weight="700" letter-spacing="1.1" fill="#f2f2f2" font-family="${F}"><textPath href="#tachArc">BLUMENFELD</textPath></text>
       <circle cx="${c}" cy="${c}" r="121" fill="url(#gSteel)"/>
       <circle cx="${c}" cy="${c}" r="118" fill="url(#gDial)"/>
       <circle cx="${c}" cy="${c}" r="72" fill="#fff" opacity=".35"/>
       <g opacity=".08">${Array.from({ length: 90 }, (_, i) => L(i * 4, 0, 118, 'stroke="#000" stroke-width=".4"')).join("")}</g>
-      ${track.join("")}${trackNums}${idx.join("")}
-      ${sub(c, c - 52, "subM", ["30", "5", "10", "15", "20", "25"], 30)}
-      ${sub(c - 52, c, "subS", ["60", "15", "30", "45"], 60)}
-      ${sub(c, c + 52, "subH", ["12", "2", "4", "6", "8", "10"], 24)}
-      <text x="${c + 30}" y="${c - 14}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="1" fill="#1a1a1a" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
-      <text x="${c + 30}" y="${c - 7.5}" text-anchor="middle" font-size="3.4" letter-spacing="1" fill="#444" font-family="${F}">CHRONOGRAPH</text>
-      <g filter="url(#sh)"><rect x="${c + 52}" y="${c - 8}" width="40" height="16" rx="1.5" fill="url(#gSteel)"/>
-        <rect x="${c + 54}" y="${c - 6.4}" width="21" height="12.8" fill="#fff"/><rect x="${c + 76.5}" y="${c - 6.4}" width="13.5" height="12.8" fill="#fff"/>
-        <text id="wDay" x="${c + 64.5}" y="${c + 3.6}" text-anchor="middle" font-size="9" font-weight="700" fill="#111" font-family="${F}">MON</text>
-        <text id="wDate" x="${c + 83.2}" y="${c + 3.6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111" font-family="${F}">1</text></g>
+      ${track.join("")}${idx.join("")}
+      ${sub(c, c - 53, "subM", ["30", "5", "10", "15", "20", "25"], 30)}
+      ${sub(c - 53, c, "subS", ["60", "15", "30", "45"], 60)}
+      ${sub(c, c + 53, "subH", ["12", "2", "4", "6", "8", "10"], 24)}
+      <text x="${c + 34}" y="${c - 16}" text-anchor="middle" font-size="7.2" font-weight="700" letter-spacing="1" fill="#1a1a1a" font-family="Didot,'Bodoni 72',Georgia,serif">LIFE</text>
+      <text x="${c + 34}" y="${c - 9.5}" text-anchor="middle" font-size="3.4" letter-spacing="1" fill="#444" font-family="${F}">CHRONOGRAPH</text>
+      <g filter="url(#sh)"><rect x="${c + 50}" y="${c - 8}" width="40" height="16" rx="1.5" fill="url(#gSteel)"/>
+        <rect x="${c + 52}" y="${c - 6.4}" width="21" height="12.8" fill="#fff"/><rect x="${c + 74.5}" y="${c - 6.4}" width="13.5" height="12.8" fill="#fff"/>
+        <text id="wDay" x="${c + 62.5}" y="${c + 3.6}" text-anchor="middle" font-size="9" font-weight="700" fill="#111" font-family="${F}">MON</text>
+        <text id="wDate" x="${c + 81.2}" y="${c + 3.6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111" font-family="${F}">1</text></g>
       <g id="hh" filter="url(#sh)"><path d="M${c - 4.4} ${c + 12} L${c - 3.6} ${c - 50} L${c} ${c - 60} L${c + 3.6} ${c - 50} L${c + 4.4} ${c + 12} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.3}" y="${c - 50}" width="2.6" height="36" rx="1" fill="#fff"/></g>
       <g id="mm" filter="url(#sh)"><path d="M${c - 3.6} ${c + 16} L${c - 2.8} ${c - 86} L${c} ${c - 98} L${c + 2.8} ${c - 86} L${c + 3.6} ${c + 16} Z" fill="url(#gSteel)" stroke="#555" stroke-width=".5"/><rect x="${c - 1.1}" y="${c - 88}" width="2.2" height="64" rx=".8" fill="#fff"/></g>
       <g id="cs" filter="url(#sh)"><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#f5f5f5" stroke-width="1.3" stroke-linecap="round"/><line x1="${c}" y1="${c + 26}" x2="${c}" y2="${c - 113}" stroke="#777" stroke-width=".35"/><circle cx="${c}" cy="${c + 20}" r="3.8" fill="url(#gSteel)" stroke="#666" stroke-width=".4"/></g>
@@ -224,9 +225,9 @@
       const beat = Math.floor(now.getMilliseconds() / 125) * 125;
       const s = +p.second + beat / 1000, m = +p.minute + s / 60, h = (+p.hour % 12) + m / 60;
       rot("hh", h * 30); rot("mm", m * 6);
-      rot("subS", s * 6, 98, 150);
+      rot("subS", s * 6, 97, 150);
       const cm = Math.floor(chronoMs() / 125) * 125 / 1000; // chrono seconds, in 1/8 beats
-      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 150, 98); rot("subH", ((cm / 3600) % 12) * 30, 150, 202);
+      rot("cs", (cm % 60) * 6); rot("subM", ((cm / 60) % 30) * 12, 150, 97); rot("subH", ((cm / 3600) % 12) * 30, 150, 203);
       const d = document.getElementById("wDate");
       if (d && d.textContent !== p.day) d.textContent = p.day;
       const w = document.getElementById("wDay"), wd = String(p.weekday || "").toUpperCase();
