@@ -1,4 +1,4 @@
-// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #trim, #pkgs, #money, #photos).
+// Life — Jeff's master app. One page; sections open from the home tiles (#todo, #wish, #trim, #pkgs (Incoming), #money, #photos).
 (() => {
   const $app = document.getElementById("app");
   const store = {
@@ -8,7 +8,7 @@
   let token = store.get("life.token");
   let D = { todo: [], wish: [], pkgs: [], status: {} };
   let trim = null, money = null;
-  const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false };
+  const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false, inTab: "personal" };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const usd = (n, cents = true) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
@@ -64,7 +64,7 @@
     render();
     loadTrim(); loadMoney();
   }
-  async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "trim"].includes(route())) render(); }
+  async function loadTrim() { try { trim = await api("trim"); } catch (_) { trim = { ready: false, why: "Couldn’t load" }; } if (["", "trim", "pkgs"].includes(route())) render(); }
   async function loadMoney() { try { money = await api("money"); } catch (_) { money = { ready: false, why: "Couldn’t load" }; } if (["", "money"].includes(route())) render(); }
 
   async function save(col, doc) {
@@ -83,8 +83,8 @@
 
   // ---------- Routing ----------
   const route = () => location.hash.replace(/^#/, "");
-  window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim") loadTrim(); });
-  const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["todo", "To-Do", "check"], ["pkgs", "Packages", "box"]];
+  window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim" || route() === "pkgs") loadTrim(); });
+  const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["todo", "To-Do", "check"], ["pkgs", "Incoming", "box"]];
   const ICON = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
@@ -204,6 +204,7 @@
     const open = D.todo.filter((t) => !t.done), dueToday = open.filter((t) => t.due && t.due <= todayKey()).length;
     const wishes = D.wish.filter((w) => !w.got);
     const active = D.pkgs.filter((p) => !p.delivered && !p.archived), ofd = active.filter((p) => p.statusCode === 4).length;
+    const trimIn = trim?.ready && Array.isArray(trim.incoming) ? trim.incoming.length : 0;
     const n = (v, fmt) => `<span data-count="${+v || 0}"${fmt ? ` data-fmt="${fmt}"` : ""}>${fmt === "usd" ? usd(v, false) : v}</span>`;
     const moneyTile = money?.ready
       ? `<div class="row2"><div><div class="big money">${n(money.cash ?? 0, "usd")}</div><div class="sm">Cash across accounts</div></div>
@@ -220,7 +221,7 @@
       ${tile("money", "wallet", "Money", moneyTile, 0, "wide")}
       ${tile("trim", "chart", "Trim Sales", trimTile, 1, "wide")}
       ${tile("todo", "check", "To-Do", `<div><div class="big">${n(open.length)}</div><div class="sm">${dueToday ? dueToday + " due or late" : "open"}</div></div>`, 2)}
-      ${tile("pkgs", "box", "Packages", `<div><div class="big">${n(active.length)}</div><div class="sm">${ofd ? ofd + " out for delivery" : "on the way"}</div></div>`, 3)}
+      ${tile("pkgs", "box", "Incoming", `<div><div class="big">${n(active.length + trimIn)}</div><div class="sm">${ofd ? ofd + " out for delivery" : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`}</div></div>`, 3)}
       ${tile("wish", "gift", "Wish List", `<div><div class="big">${n(wishes.length)}</div><div class="sm">${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)} total</div></div>`, 4)}
       ${tile("photos", "photo", "Photos", `<div><div class="big" style="font-size:16px;color:var(--mute)">Soon</div><div class="sm">OneDrive folders</div></div>`, 5)}
     </div>`;
@@ -291,7 +292,7 @@
         <span style="${d.day === t ? "color:var(--text);font-weight:700" : ""}">${new Date(d.day + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}</span></div>`).join("")}</div></div>`;
   }
 
-  // ---------- Packages ----------
+  // ---------- Incoming: personal packages + Trim purchase orders ----------
   const CARRIER = { usps: "USPS", ups: "UPS", fedex: "FedEx", dhl: "DHL", intl: "Intl post", amazon: "Amazon" };
   const carrierLink = (p) => {
     const n = encodeURIComponent(p.tracking);
@@ -320,7 +321,7 @@
           <button class="btn ghost sm" data-act="pkg-archive" data-id="${p.id}">${p.archived ? "Unarchive" : p.delivered ? "Hide" : "Archive"}</button><span class="sp"></span>
           <button class="btn danger sm" data-act="pkg-del" data-id="${p.id}">Delete</button></div></div>` : ""}</div>`;
     };
-    return top("Packages", `<button class="btn ghost sm" data-act="pkg-check">Check now</button>`) + `
+    const personal = `
       <form class="card" data-form="pkg-add"><input name="tracking" placeholder="Tracking number" autocomplete="off" required>
       <div class="row" style="margin-top:8px"><input name="label" placeholder="What is it? (e.g. Boots)" class="grow"><input name="from" placeholder="From (Amazon, Brownells…)" class="grow"></div>
       <div class="row" style="margin-top:8px"><span class="sub grow" id="cg">Carrier is detected from the number</span><button class="btn">Track</button></div></form>
@@ -329,7 +330,34 @@
       ${old.length ? `<h3><button class="icon" data-act="pkg-showold" style="font-size:13px;color:var(--mute)">${ui.pkgShowOld ? "▾" : "▸"} Delivered &amp; archived (${old.length})</button></h3>${ui.pkgShowOld ? old.map(card).join("") : ""}` : ""}
       <h3>Delivery alerts</h3><div class="card"><div class="row"><div class="grow"><div style="font-weight:600">Notifications on this device</div>
       <div class="sub" id="pushst">${pushState()}</div></div><button class="btn sm" data-act="push-on">Turn on</button></div></div>`;
+    const pos = trim?.ready && Array.isArray(trim.incoming) ? trim.incoming : null;
+    const poPill = (k) => {
+      if (k.delivered) return '<span class="pill good">Delivered</span>';
+      if (k.error) return `<span class="pill bad">${esc(k.error)}</span>`;
+      const s = k.status || "Waiting for first scan";
+      return `<span class="pill ${/out for delivery|pickup/i.test(s) ? "blue" : /transit/i.test(s) ? "warn" : /attempt|attention/i.test(s) ? "bad" : ""}">${esc(s)}</span>`;
+    };
+    const trimCard = (po) => {
+      const open = ui.open["po" + po.id], items = po.items || [], pk = po.packages || [];
+      const left = pk.filter((k) => !k.delivered).length;
+      return `<div class="card"><div class="row" data-act="po-open" data-id="${esc(po.id)}" style="cursor:pointer"><div class="grow">
+        <div style="font-weight:700">${esc(po.supplier || "Supplier")}${po.orderNo ? ` <span class="sub">· PO ${esc(po.orderNo)}</span>` : ""}</div>
+        <div class="sub">${po.date ? fmtDay(po.date) + " · " : ""}${items.length ? items.slice(0, 3).map((i) => `${i.qty}× ${esc(i.name)}`).join(", ") + (items.length > 3 ? ` +${items.length - 3} more` : "") : esc(po.status)}</div>
+        <div style="margin-top:7px">${pk.length ? (left ? `<span class="pill">${pk.length} package${pk.length === 1 ? "" : "s"}${left !== pk.length ? ` · ${pk.length - left} delivered` : ""}</span> ` + poPill(pk.find((k) => !k.delivered) || pk[0]) : poPill({ delivered: true })) : '<span class="pill">No tracking yet</span>'}</div></div>
+        <span class="sub">${open ? "▾" : "▸"}</span></div>
+        ${open ? `<div style="margin-top:10px">${pk.map((k) => `<div class="ev"><div class="row"><div class="grow">${esc((CARRIER[k.carrier] || "") + " " + k.tracking)}<small>${esc(k.summary || "")}${k.checkedAt ? " · checked " + ago(k.checkedAt) : ""}</small></div>${poPill(k)}</div>
+          <a class="btn ghost sm" style="margin-top:6px;display:inline-block" href="${carrierLink({ tracking: k.tracking, carrier: k.carrier || guessCarrier(k.tracking) })}" target="_blank" rel="noopener">Carrier site</a></div>`).join("")}
+          ${items.length > 3 ? `<div class="note">${items.map((i) => `${i.qty}× ${esc(i.name)}`).join(" · ")}</div>` : ""}</div>` : ""}</div>`;
+    };
+    const trimHtml = !trim ? `<div class="empty">Loading…</div>` : !trim.ready ? `<div class="card"><div class="sub">${esc(trim.why)}</div></div>`
+      : !pos ? `<div class="card"><div class="sub">Trim tracker needs its latest update to share purchase orders.</div></div>`
+      : pos.length ? `<div class="note" style="margin:0 0 10px">Open purchase orders from the Trim tracker · statuses update there every 15 minutes</div>${pos.map(trimCard).join("")}` : `<div class="empty">No purchase orders on the way.</div>`;
+    const tab = ui.inTab;
+    return top("Incoming", tab === "personal" ? `<button class="btn ghost sm" data-act="pkg-check">Check now</button>` : `<button class="btn ghost sm" data-act="trim-refresh">Refresh</button>`) + `
+      <div class="seg" style="margin-top:12px"><button class="${tab === "personal" ? "on" : ""}" data-act="in-tab" data-id="personal">Personal (${active.length})</button><button class="${tab === "trim" ? "on" : ""}" data-act="in-tab" data-id="trim">Trim Incoming (${pos ? pos.length : "–"})</button></div>
+      ${tab === "trim" ? trimHtml : personal}`;
   }
+  const guessCarrier = (t) => { t = String(t || "").replace(/\s+/g, "").toUpperCase(); return /^1Z/.test(t) ? "ups" : /^(\d{12}|\d{15}|\d{20})$/.test(t) ? "fedex" : /^\d{10,11}$|^JJD/.test(t) ? "dhl" : "usps"; };
   function pushState() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return /iPhone|iPad/.test(navigator.userAgent) ? "On iPhone: Share → Add to Home Screen, then open Life from that icon." : "This browser can’t do notifications.";
     if (!D.status.push) return "Push keys aren’t set on the project yet.";
@@ -410,6 +438,8 @@
         case "wish-showgot": ui.wishShowGot = !ui.wishShowGot; render(); break;
         case "wish-del": if (confirmDel()) { await remove("wish", id); closeSheet(); } break;
         case "pkg-open": ui.open[id] = !ui.open[id]; render(); break;
+        case "po-open": ui.open["po" + id] = !ui.open["po" + id]; render(); break;
+        case "in-tab": ui.inTab = id; render(); break;
         case "trim-refresh": trim = null; render(); loadTrim(); break;
         case "money-refresh": money = null; render(); loadMoney(); break;
         case "pkg-check": {
