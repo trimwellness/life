@@ -18,9 +18,9 @@ export async function readPrefix(s, prefix) {
   return out.filter((x) => x.data).map((x) => ({ id: x.id, ...x.data }));
 }
 
-// ---- Sign-in: one PIN (LIFE_PIN). A good PIN gets a signed token that lasts 180 days on that device.
+// ---- Sign-in: no PIN. Opening the private link (/#k=LIFE_LINK_KEY) once signs that device in for good.
 const enc = new TextEncoder();
-const secret = () => env("LIFE_SECRET") || "life:" + env("LIFE_PIN");
+const secret = () => env("LIFE_SECRET") || "life:" + env("LIFE_LINK_KEY");
 const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 async function sign(msg) {
   const key = await crypto.subtle.importKey("raw", enc.encode(secret()), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -34,11 +34,11 @@ export function same(a, b) {
   return x === 0;
 }
 export async function makeToken() {
-  const exp = Date.now() + 180 * 864e5;
+  const exp = Date.now() + 3650 * 864e5;
   return `${exp}.${await sign("life." + exp)}`;
 }
 export async function signedIn(req) {
-  if (!env("LIFE_PIN")) return false;
+  if (!env("LIFE_LINK_KEY")) return false;
   const t = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   const [exp, sig] = t.split(".");
   if (!exp || !sig || +exp < Date.now()) return false;

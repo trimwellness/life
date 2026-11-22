@@ -36,18 +36,17 @@
     return d;
   }
 
-  // ---------- Sign in ----------
+  // ---------- Sign in: no PIN. The private link (…/#k=KEY) signs this device in once, for good. ----------
   function renderLogin(err = "") {
-    $app.innerHTML = `<div class="login"><h1>Life</h1><div class="sub">Enter your PIN</div>
-      <form id="lf"><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" autofocus>
-      <div class="err">${esc(err)}</div><button class="btn" style="width:100%">Unlock</button></form></div>`;
-    document.getElementById("lf").onsubmit = async (e) => {
-      e.preventDefault();
-      try {
-        const d = await api("login", { method: "POST", body: { pin: document.getElementById("pin").value } });
-        token = d.token; store.set("life.token", token); boot();
-      } catch (x) { if (x.message !== "signin") renderLogin(x.message); }
-    };
+    $app.innerHTML = `<div class="login"><h1>Life</h1><div class="sub">Open Life from your private link on this device once and it stays signed in.</div>
+      <div class="err" style="margin-top:14px">${esc(err)}</div></div>`;
+  }
+  async function linkSignIn() {
+    const m = location.hash.match(/^#k=([^&]+)/);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname);
+    try { const d = await api("login", { method: "POST", body: { key: decodeURIComponent(m[1]) } }); token = d.token; store.set("life.token", token); }
+    catch (x) { renderLogin(x.message); throw x; }
   }
 
   // ---------- Data ----------
@@ -393,5 +392,5 @@
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
   navigator.serviceWorker?.addEventListener("message", (e) => { if (e.data?.open) location.hash = e.data.open; });
-  boot();
+  linkSignIn().then(boot, () => {});
 })();

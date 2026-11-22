@@ -1,4 +1,4 @@
-// Life API. Everything except /api/login needs the signed-in token from the PIN.
+// Life API. Everything except /api/login needs the device token handed out by the private link.
 import { store, COLS, env, json, clip, num, newId, readPrefix, makeToken, signedIn, same } from "../lib/common.mjs";
 import { pushReady, hashOf, sendPush } from "../lib/push.mjs";
 import { parcelReady, checkPackages, guessCarrier, clean } from "../lib/parcel.mjs";
@@ -27,15 +27,15 @@ async function seed(s) {
 }
 
 async function login(req, s) {
-  const pin = env("LIFE_PIN");
-  if (!pin) return json({ error: "LIFE_PIN isn’t set on the Netlify project yet." }, 503);
+  const want = env("LIFE_LINK_KEY");
+  if (!want) return json({ error: "LIFE_LINK_KEY isn’t set on the Netlify project yet." }, 503);
   const lock = (await s.get("meta/login", { type: "json" })) || { fails: 0, until: 0 };
   if (lock.until > Date.now()) return json({ error: "Too many tries. Wait 15 minutes." }, 429);
   const b = await req.json().catch(() => ({}));
-  if (!same(String(b.pin || ""), pin)) {
+  if (!same(String(b.key || ""), want)) {
     const fails = (lock.fails || 0) + 1;
     await s.setJSON("meta/login", fails >= 5 ? { fails: 0, until: Date.now() + 15 * 60e3 } : { fails, until: 0 });
-    return json({ error: "Wrong PIN" }, 401);
+    return json({ error: "That link isn’t right" }, 401);
   }
   await s.setJSON("meta/login", { fails: 0, until: 0 });
   return json({ token: await makeToken() });
