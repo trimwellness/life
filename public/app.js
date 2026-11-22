@@ -290,7 +290,7 @@
     return `<section class="hero">
         <div class="spot"></div>
         <div class="duo">
-          <figure class="us"><img src="/us.jpg?v=4" alt="Jeff and Lindsey" draggable="false"></figure>
+          <figure class="us"><picture><source srcset="/us.webp?v=5" type="image/webp"><img src="/us.png?v=5" alt="Jeff and Lindsey" draggable="false"></picture></figure>
           <div class="watch">${watchSVG()}</div>
         </div>
         <div class="crest"><i></i><span>Blumenfeld</span><i></i></div>
