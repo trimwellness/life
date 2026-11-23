@@ -102,6 +102,9 @@
     plus: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
     scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><rect x="7" y="8" width="10" height="8" rx="1.5"/><path d="M9.5 11h5M9.5 13.5h3"/>',
     doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
+    speaker: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+    mute: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -350,7 +353,7 @@
         </div></div>
       </section>
       ${ticker}
-      <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
+      <div class="askbar" data-act="gerald" role="button"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="ask-mic" data-act="gerald-talk" role="button" aria-label="Talk to Gerald">${svg("mic")}</span></div>
       ${todayCard}${dials}${wishLine}
 `;
   }
@@ -1362,15 +1365,100 @@
   }
 
   // ---------- Gerald ----------
+  // ---------- Gerald's voice: tap the mic, talk, he answers out loud ----------
+  const VOICE = { on: store.get("life.voice") !== "off", listening: false, rec: null, media: null, audio: null, bvoice: null };
+  const speakable = (t) => String(t || "").replace(/\[\[login:[^\]]+\]\]/g, "").replace(/\*\*/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\$([\d,]+)\.00\b/g, "$$$1").replace(/\n+/g, ". ").replace(/\s+/g, " ").trim().slice(0, 900);
+  function unlockAudio() {
+    // iPhone only lets a page play sound after a tap, so prime both players during the tap.
+    try { if (!VOICE.audio) { VOICE.audio = new Audio(); VOICE.audio.playsInline = true; } VOICE.audio.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"; VOICE.audio.play().catch(() => {}); } catch (_) {}
+    try { if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } } catch (_) {}
+  }
+  function browserVoice() {
+    if (VOICE.bvoice) return VOICE.bvoice;
+    const vs = ("speechSynthesis" in window ? speechSynthesis.getVoices() : []) || [];
+    return (VOICE.bvoice = ["Daniel", "Arthur", "Oliver", "Aaron", "Alex"].map((n) => vs.find((x) => x.name.startsWith(n) && /en/i.test(x.lang))).find(Boolean) || vs.find((x) => /en-GB/i.test(x.lang)) || vs.find((x) => /en-US/i.test(x.lang)) || null);
+  }
+  async function speak(text) {
+    const t = speakable(text); if (!t || !VOICE.on) return;
+    stopSpeaking();
+    try {
+      const r = await fetch("/voice/say", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ text: t }) });
+      if (!r.ok) throw new Error("tts");
+      const url = URL.createObjectURL(await r.blob());
+      if (!VOICE.audio) { VOICE.audio = new Audio(); VOICE.audio.playsInline = true; }
+      VOICE.audio.src = url; VOICE.audio.onended = () => { URL.revokeObjectURL(url); gSpeaking(false); };
+      gSpeaking(true); await VOICE.audio.play();
+    } catch (_) {
+      if (!("speechSynthesis" in window)) return;
+      const u = new SpeechSynthesisUtterance(t); const bv = browserVoice(); if (bv) { u.voice = bv; u.lang = bv.lang; }
+      u.rate = 1.02; u.pitch = 0.95; u.onend = () => gSpeaking(false); gSpeaking(true); speechSynthesis.speak(u);
+    }
+  }
+  function stopSpeaking() { try { VOICE.audio?.pause(); } catch (_) {} try { speechSynthesis.cancel(); } catch (_) {} gSpeaking(false); }
+  const gSpeaking = (on) => document.querySelector("#gmodal .gdot.big")?.classList.toggle("talking", on);
+  function micUI(state, hint) {
+    const b = document.querySelector("#gmodal .g-mic"), i = document.querySelector("#gmodal input[name=q]");
+    if (b) b.classList.toggle("on", state === "listening"), b.classList.toggle("busy", state === "thinking");
+    if (i) i.placeholder = state === "listening" ? "Listening… tap the mic when you’re done" : state === "thinking" ? "One moment…" : "Ask or tell Gerald…";
+    if (hint && i) i.value = hint;
+  }
+  async function listen() {
+    if (VOICE.listening) return stopListening();
+    unlockAudio(); stopSpeaking();
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      try {
+        const rec = new SR(); VOICE.rec = rec; rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false;
+        let final = "", gotAny = false, failed = false;
+        rec.onresult = (e) => { gotAny = true; let t = ""; for (const r of e.results) t += r[0].transcript; final = t; micUI("listening", t); };
+        rec.onerror = (e) => { failed = e.error !== "no-speech" && e.error !== "aborted"; };
+        rec.onend = () => { VOICE.listening = false; VOICE.rec = null; micUI("idle"); if (final.trim()) { micUI("idle", ""); askGerald(final, { voice: true }); } else if (failed && !gotAny) recordAudio(); };
+        VOICE.listening = true; micUI("listening"); rec.start(); return;
+      } catch (_) { VOICE.listening = false; }
+    }
+    recordAudio();
+  }
+  // Fallback for when the phone's own speech recognition isn't available: record, then transcribe on the server.
+  async function recordAudio() {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return toast("Voice isn’t available on this device");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+      const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined), chunks = [];
+      VOICE.media = mr; VOICE.listening = true; micUI("listening");
+      // Stop on its own after ~1.6s of quiet (or 30s max).
+      const ctx = new (window.AudioContext || window.webkitAudioContext)(), an = ctx.createAnalyser(); ctx.createMediaStreamSource(stream).connect(an);
+      const buf = new Uint8Array(an.fftSize); let quietSince = 0, heard = false; const t0 = Date.now();
+      const tick = setInterval(() => { an.getByteTimeDomainData(buf); let pk = 0; for (const x of buf) pk = Math.max(pk, Math.abs(x - 128)); const now = Date.now(); if (pk > 10) { heard = true; quietSince = 0; } else if (heard && !quietSince) quietSince = now; if ((heard && quietSince && now - quietSince > 1600) || now - t0 > 30000) stopListening(); }, 120);
+      mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      mr.onstop = async () => {
+        clearInterval(tick); stream.getTracks().forEach((t) => t.stop()); ctx.close().catch(() => {});
+        VOICE.listening = false; VOICE.media = null;
+        if (!heard) { micUI("idle"); return; }
+        micUI("thinking");
+        try {
+          const blob = new Blob(chunks, { type: mr.mimeType || "audio/mp4" });
+          const r = await fetch("/voice/hear", { method: "POST", headers: { "content-type": blob.type, authorization: "Bearer " + token }, body: blob });
+          const d = await r.json().catch(() => ({}));
+          micUI("idle", "");
+          if (!r.ok) throw new Error(d.error + (d.why ? ` (${d.why})` : ""));
+          if (d.text) askGerald(d.text, { voice: true }); else toast("Didn’t catch that");
+        } catch (e) { micUI("idle"); toast(e.message || "Couldn’t hear that"); }
+      };
+      mr.start();
+    } catch (e) { VOICE.listening = false; micUI("idle"); toast(/denied|NotAllowed/i.test(e.name + e.message) ? "Allow the microphone for Life in Settings" : "Mic didn’t start"); }
+  }
+  function stopListening() { try { VOICE.rec?.stop(); } catch (_) {} try { if (VOICE.media?.state === "recording") VOICE.media.stop(); } catch (_) {} }
+  if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => (VOICE.bvoice = null);
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
   const md = (s) => esc(s).replace(/\[\[login:([A-Za-z0-9_-]+)\]\]/g, (_, id) => `<button class="gv-link" data-act="pw-g" data-id="${id}">Open ${esc(PW.key ? pwItem(id)?.title || "login" : "login")} ›</button>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[-•]\s+(.*)$/gm, "<li>$1</li>").replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m.replace(/\n/g, "")}</ul>`).replace(/\n/g, "<br>");
   function geraldHTML() {
-    return `<div class="g-head"><span class="gdot big">G</span><div class="grow"><div class="g-name">Gerald</div><div class="sub">Your assistant · sees everything in Life</div></div><button class="icon" data-act="close" style="font-size:26px">×</button></div>
+    return `<div class="g-head"><span class="gdot big">G</span><div class="grow"><div class="g-name">Gerald</div><div class="sub">Your assistant · sees everything in Life</div></div><button class="icon g-spk ${VOICE.on ? "on" : ""}" data-act="g-voice" aria-label="Voice replies">${svg(VOICE.on ? "speaker" : "mute")}</button><button class="icon" data-act="close" style="font-size:26px">×</button></div>
       <div class="g-log" id="glog">${chat.msgs.length ? chat.msgs.map((m) => `<div class="gm ${m.role}">${m.role === "assistant" ? md(m.content) : esc(m.content)}</div>`).join("") : `<div class="g-hello">Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}, Jeff. What can I do for you?</div>`}
       ${chat.busy ? `<div class="gm assistant typing"><i></i><i></i><i></i></div>` : ""}</div>
       ${chat.msgs.length ? "" : `<div class="g-sugg">${SUGGEST.map((q) => `<button data-act="g-ask" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}
-      <form class="g-in" data-form="gerald"><input name="q" placeholder="Ask or tell Gerald…" autocomplete="off" ${chat.busy ? "disabled" : ""}><button class="btn" ${chat.busy ? "disabled" : ""}>Send</button></form>`;
+      <form class="g-in" data-form="gerald"><button type="button" class="g-mic" data-act="g-mic" aria-label="Talk to Gerald" ${chat.busy ? "disabled" : ""}>${svg("mic")}<span class="g-ring"></span></button><input name="q" placeholder="Ask or tell Gerald…" autocomplete="off" ${chat.busy ? "disabled" : ""}><button class="btn" ${chat.busy ? "disabled" : ""}>Send</button></form>`;
   }
   function openGerald() {
     let m = document.getElementById("gmodal");
@@ -1385,7 +1473,7 @@
     bindForms(m);
     const log = document.getElementById("glog"); if (log) log.scrollTop = log.scrollHeight;
   }
-  async function askGerald(q) {
+  async function askGerald(q, opt = {}) {
     q = String(q || "").trim();
     if (!q || chat.busy) return;
     chat.msgs.push({ role: "user", content: q }); chat.busy = true; openGerald();
@@ -1393,6 +1481,7 @@
       const pw = PW.key ? [...PW.vault.items.map((x) => ({ id: x.id, t: x.title, u: x.user, h: host(x.url), c: x.cat || "" })), ...(PW.vault.docs || []).map((d) => ({ id: d.id, t: (d.name || dt(d.type)[1]) + " (document)", u: "", h: "", c: d.expires ? "expires " + d.expires : "document" }))] : PW.meta && !PW.meta.empty ? "locked" : null;
       const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
+      if (opt.voice) speak(r.reply);
       if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; render(); }
     } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
     chat.busy = false;
@@ -1421,9 +1510,12 @@
     const find = (col) => D[col].find((x) => x.id === id);
     try {
       switch (act) {
-        case "close": closeSheet(); document.getElementById("gmodal")?.remove(); break;
+        case "close": closeSheet(); if (document.getElementById("gmodal")) { stopListening(); stopSpeaking(); } document.getElementById("gmodal")?.remove(); break;
         case "gerald": openGerald(); setTimeout(() => document.querySelector("#gmodal input[name=q]")?.focus(), 350); break;
         case "g-ask": askGerald(el.dataset.q); break;
+        case "g-mic": listen(); break;
+        case "g-voice": VOICE.on = !VOICE.on; store.set("life.voice", VOICE.on ? "on" : "off"); if (!VOICE.on) stopSpeaking(); openGerald(); break;
+        case "gerald-talk": e.preventDefault(); e.stopPropagation(); openGerald(); listen(); break;
         case "todo-toggle": { const t = find("todo"); await save("todo", { ...t, done: !t.done }); break; }
         case "todo-showdone": ui.todoShowDone = !ui.todoShowDone; render(); break;
         case "todo-edit": {
