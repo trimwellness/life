@@ -28,7 +28,7 @@ export default async (req) => {
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: f.data } }
     : { type: "image", source: { type: "base64", media_type: "image/jpeg", data: f.data } });
   content.push({ type: "text", text: PROMPT });
-  const ask = (c) => ai.messages.create({ model: MODEL, max_tokens: 700, messages: [{ role: "user", content: c }] });
+  const ask = (c) => ai.messages.create({ model: MODEL, max_tokens: 6000, messages: [{ role: "user", content: c }] });
   try {
     let r;
     try { r = await ask(content); }

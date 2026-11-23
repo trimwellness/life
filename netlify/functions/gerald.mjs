@@ -162,7 +162,7 @@ export default async (req) => {
   let changed = false, reply = "", why = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 1500, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 8000, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
       if (!text && !uses.length) { why = `stop=${r.stop_reason} blocks=${r.content.map((c) => c.type).join(",") || "none"}`; console.error("gerald empty", why, JSON.stringify(r.usage || {})); }
