@@ -159,12 +159,13 @@ export default async (req) => {
   const v = (k) => process.env[k] || Netlify.env.get(k) || undefined;
   const ai = new Anthropic({ apiKey: v("ANTHROPIC_API_KEY"), baseURL: v("ANTHROPIC_BASE_URL") });
   const messages = [...history];
-  let changed = false, reply = "";
+  let changed = false, reply = "", why = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 900, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 1500, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
+      if (!text && !uses.length) { why = `stop=${r.stop_reason} blocks=${r.content.map((c) => c.type).join(",") || "none"}`; console.error("gerald empty", why, JSON.stringify(r.usage || {})); }
       if (!uses.length || r.stop_reason !== "tool_use") { reply = text; break; }
       messages.push({ role: "assistant", content: r.content });
       const results = [];
@@ -180,6 +181,7 @@ export default async (req) => {
     console.error("gerald", e);
     return json({ error: "Gerald couldn’t answer just now. " + String(e.message || e).slice(0, 160) }, 502);
   }
+  if (!reply && !changed) return json({ reply: `I didn’t get an answer back that time (${why || "empty reply"}). Try asking again.`, changed });
   return json({ reply: reply || "Done.", changed });
 };
 
