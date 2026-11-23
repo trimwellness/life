@@ -100,6 +100,7 @@
     car: '<path d="M4 16v-3.5l2-4.5h12l2 4.5V16M3 16h18v3H3zM7 19v1.5M17 19v1.5"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
     globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.3-3.5-8.5s1-6 3.5-8.5z"/>',
     plus: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
+    scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><rect x="7" y="8" width="10" height="8" rx="1.5"/><path d="M9.5 11h5M9.5 13.5h3"/>',
     doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
@@ -324,9 +325,8 @@
         : `<div class="tl-clear">Clear day.${nx.length ? ` Next: <b>${esc(nx[0][1].title)}</b> · ${esc(dayLabel(nx[0][0]).replace(/^(\w+day), /, ""))}${nx[0][1].time ? " " + clk(nx[0][1].time) : ""}` : ""}</div>`}</a>`;
 
     // ---- Subdials: every section as a chronograph sub-dial
-    const C = 2 * Math.PI * 27;
-    const dial = (href, ic, label, val, frac, i) => `<a class="dial" href="#${href}" style="--i:${i}"><span class="dial-o"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" class="dt"/>${Array.from({ length: 12 }, (_, j) => `<line x1="32" y1="2.5" x2="32" y2="${j % 3 ? 4.5 : 6}" transform="rotate(${j * 30} 32 32)" class="dk"/>`).join("")}<circle cx="32" cy="32" r="27" class="da" style="stroke-dasharray:${C.toFixed(1)};--off:${(C * (1 - Math.max(0, Math.min(1, frac || 0)))).toFixed(1)}" transform="rotate(-90 32 32)"/></svg>
-      <span class="dial-v">${val === "" ? svg(ic) : val}</span></span><span class="dial-l">${label}</span></a>`;
+    const dial = (href, ic, label, val, _frac, i) => `<a class="dial" href="#${href}" style="--i:${i}"><span class="dial-o"><svg viewBox="0 0 64 64" class="dial-ticks">${Array.from({ length: 12 }, (_, j) => `<line x1="32" y1="3" x2="32" y2="${j % 3 ? 5 : 7}" transform="rotate(${j * 30} 32 32)"/>`).join("")}</svg>
+      <span class="dial-i">${svg(ic)}</span>${val !== "" && val !== "—" && val !== 0 ? `<span class="dial-b">${val}</span>` : ""}</span><span class="dial-l">${label}</span></a>`;
     const doneN = D.todo.filter((t) => t.done).length, evN = evOn(today).length;
     const dayFrac = (now.getHours() * 60 + now.getMinutes()) / 1440;
     const docs = PW.key ? (PW.vault.docs || []) : null, docsOk = docs ? docs.filter((d) => !d.expires || d.expires > today).length : 0;
@@ -1264,17 +1264,55 @@
     document.querySelectorAll(".doc-fi[data-fid]").forEach(async (el) => { const f = d.files.find((x) => x.fid === el.dataset.fid); if (f.mime === "application/pdf") return; try { el.innerHTML = `<img src="${await docFileUrl(f)}" alt="">`; } catch (_) { el.textContent = "!"; } });
   }
   function docForm(d = {}) {
+    DOCST.pending = [];
     sheet(`<h2>${d.id ? "Edit" : "Add"} document</h2><form data-form="doc-save" data-id="${d.id || ""}">
+      ${d.id ? "" : `<label class="doc-scan"><input type="file" accept="image/*,application/pdf" multiple data-docscan hidden>
+        <span class="doc-scan-i">${svg("scan")}</span><span><b>Scan or upload</b><small>Front & back photos or a PDF — I’ll read it and fill everything in</small></span></label>
+        <div class="doc-pend"></div><div class="doc-status"></div>`}
       <label>Type</label><select name="type">${DOC_TYPES.map(([k, n]) => `<option value="${k}" ${(d.type || "dl") === k ? "selected" : ""}>${n}</option>`).join("")}</select>
-      <label>Label (optional)</label><input name="name" value="${esc(d.name || "")}" placeholder="e.g. Jeff’s license, Lindsey’s card">
+      <label>Label</label><input name="name" value="${esc(d.name || "")}" placeholder="e.g. PA Driver’s License">
       <label>Number</label><input name="number" value="${esc(d.number || "")}" autocomplete="off" autocapitalize="characters" class="mono">
       <label>Name on document</label><input name="holder" value="${esc(d.holder || "")}">
       <label>Issued by</label><input name="issuer" value="${esc(d.issuer || "")}" placeholder="e.g. PennDOT, Cumberland County Sheriff, Progressive">
       <div class="cal-2"><div><label>Issued</label><input type="date" name="issued" value="${esc(d.issued || "")}"></div><div><label>Expires</label><input type="date" name="expires" value="${esc(d.expires || "")}"></div></div>
       <label class="doc-chk"><input type="checkbox" name="remind" ${d.id ? "" : "checked"}> Add a renewal reminder to Calendar (30 days before it expires)</label>
       <label>Notes</label><textarea name="notes">${esc(d.notes || "")}</textarea>
-      ${d.id ? "" : `<label>Scans (front, back, PDF)</label><input type="file" name="files" accept="image/*,application/pdf" multiple>`}
-      <div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">${DOCST.up ? "Saving…" : "Save"}</button></div></form>`);
+      <div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
+  }
+  // Prepare a picked file: an encrypted-ready copy for storage, plus a lighter copy for reading.
+  async function docPrep(f) {
+    const pdf = /pdf/i.test(f.type) || /\.pdf$/i.test(f.name);
+    if (pdf) { const bytes = new Uint8Array(await f.arrayBuffer()); return { bytes, mime: "application/pdf", preview: "", ai: { mime: "application/pdf", data: b64e(bytes) } }; }
+    const { im, u } = await loadImage(f);
+    const draw = (max, q) => { const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement("canvas"); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); return toBlob(c, q); };
+    const full = new Uint8Array(await (await draw(2200, 0.86)).arrayBuffer()), small = await draw(1568, 0.85);
+    URL.revokeObjectURL(u);
+    return { bytes: full, mime: "image/jpeg", preview: URL.createObjectURL(small), ai: { mime: "image/jpeg", data: b64e(new Uint8Array(await small.arrayBuffer())) } };
+  }
+  async function docScan(list) {
+    const F = document.querySelector('form[data-form="doc-save"]'); if (!F) return;
+    const st = F.querySelector(".doc-status"), pend = F.querySelector(".doc-pend");
+    st.innerHTML = `<span class="spin"></span> Preparing…`;
+    try {
+      for (const f of [...list]) DOCST.pending.push(await docPrep(f));
+      pend.innerHTML = DOCST.pending.map((p, i) => `<span class="doc-fi">${p.preview ? `<img src="${p.preview}" alt="">` : "PDF"}<small>${["Front", "Back"][i] || "Page " + (i + 1)}</small></span>`).join("");
+      st.innerHTML = `<span class="spin"></span> Reading your document…`;
+      const r = await api("/docscan", { method: "POST", body: { files: DOCST.pending.slice(0, 3).map((p) => p.ai) } });
+      const set = (n, v) => { if (v && F[n] && !F[n].value) F[n].value = v; };
+      if (r.type) F.type.value = r.type;
+      ["name", "number", "holder", "issuer", "issued", "expires", "notes"].forEach((n) => set(n, r[n]));
+      F.querySelectorAll("input,select,textarea").forEach((x) => { if (x.value && ["type", "name", "number", "holder", "issuer", "issued", "expires", "notes"].includes(x.name)) x.classList.add("filled"); });
+      st.innerHTML = `<span class="ok">✓</span> Filled in from your scan — give it a quick check.`;
+    } catch (e) { st.innerHTML = `<span class="bad">!</span> ${esc(e.message || "Couldn’t read it")} — the scan will still be saved.`; }
+  }
+  async function docUploadPrepared(list) {
+    const out = [];
+    for (const p of list) {
+      const r = await fetch("/api/pw/file", { method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/octet-stream" }, body: await encBytes(p.bytes) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Upload failed");
+      out.push({ fid: d.id, mime: p.mime, side: p.mime === "application/pdf" ? "PDF" : ["Front", "Back"][out.length] || "Photo" });
+    }
+    return out;
   }
   async function docUploadFiles(list) {
     const out = [];
@@ -1292,8 +1330,7 @@
   async function docSubmit(f) {
     const fd = new FormData(f), id = f.dataset.id, L = docList(), old = L.find((x) => x.id === id) || {};
     const d = { ...old, id: id || newPwId(), type: fd.get("type"), name: String(fd.get("name") || "").trim(), number: String(fd.get("number") || "").trim(), holder: String(fd.get("holder") || "").trim(), issuer: String(fd.get("issuer") || "").trim(), issued: fd.get("issued") || "", expires: fd.get("expires") || "", notes: String(fd.get("notes") || ""), files: old.files || [] };
-    const picks = fd.getAll("files").filter((x) => x && x.size);
-    if (picks.length) { DOCST.up = true; toast("Encrypting & uploading…"); try { d.files = [...d.files, ...(await docUploadFiles(picks))]; } finally { DOCST.up = false; } }
+    if (DOCST.pending?.length) { DOCST.up = true; toast("Encrypting & saving…"); try { d.files = [...d.files, ...(await docUploadPrepared(DOCST.pending))]; } finally { DOCST.up = false; DOCST.pending.forEach((p) => p.preview && URL.revokeObjectURL(p.preview)); DOCST.pending = []; } }
     const i = L.findIndex((x) => x.id === d.id); i >= 0 ? (L[i] = d) : L.push(d);
     await pwPersist();
     if (fd.get("remind") && d.expires) {
@@ -1303,6 +1340,7 @@
     }
     closeSheet(); render(); toast("Saved");
   }
+  document.addEventListener("change", (e) => { if (e.target.matches("input[data-docscan]")) { const l = [...e.target.files]; e.target.value = ""; if (l.length) docScan(l); } });
   document.addEventListener("change", async (e) => {
     if (!e.target.matches("input[data-docupload]")) return;
     const id = e.target.dataset.docupload, list = e.target.files; e.target.value = "";
