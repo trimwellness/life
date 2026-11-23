@@ -24,7 +24,7 @@ export default async (req) => {
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
     if (!r.ok) { const why = `${r.status} ${(await r.text()).replace(/\s+/g, " ").slice(0, 160)}`; console.error("hear failed", why); return json({ error: "Couldn’t hear that", why }, 502); }
     const d = await r.json();
-    const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim().replace(/^["“]|["”]$/g, "");
+    const text = (d.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || "").join("").trim().replace(/^["“]|["”]$/g, "");
     return json({ text });
   }
 
