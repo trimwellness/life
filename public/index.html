@@ -451,6 +451,23 @@ form[data-form="ev-save"] input[type=date]::-webkit-date-and-time-value,form[dat
 <body>
 <div id="cf"></div>
 <main id="app"><div class="empty">Loading…</div></main>
-<script src="/app.js?v=45"></script>
+<script>
+  // If anything stops Life from starting, show the reason instead of a black screen.
+  (function () {
+    function show(msg) {
+      if (document.getElementById("boot-err")) return;
+      var d = document.createElement("div"); d.id = "boot-err";
+      d.style.cssText = "position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 24px);z-index:9999;padding:16px;border-radius:16px;background:#1a1410;border:1px solid rgba(255,122,107,.6);color:#f6efdc;font:14px -apple-system,system-ui,sans-serif";
+      d.innerHTML = '<b style="color:#ff9585">Life hit a startup error</b><div style="margin-top:8px;font:12px ui-monospace,Menlo,monospace;word-break:break-word;opacity:.85"></div><button style="margin-top:12px;padding:10px 16px;border-radius:12px;border:0;background:#d4af37;color:#1a1306;font-weight:700">Reload</button>';
+      d.querySelector("div").textContent = String(msg).slice(0, 600);
+      d.querySelector("button").onclick = function () { location.hash = ""; location.reload(); };
+      (document.body || document.documentElement).appendChild(d);
+    }
+    window.addEventListener("error", function (e) { if (!document.getElementById("app") || !document.getElementById("app").children.length) show((e.message || "Error") + (e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : "")); });
+    window.addEventListener("unhandledrejection", function (e) { if (!document.getElementById("app") || !document.getElementById("app").children.length) show("Promise: " + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+    setTimeout(function () { var a = document.getElementById("app"); if (a && !a.children.length && !document.getElementById("boot-err")) show("Nothing rendered after 8 seconds."); }, 8000);
+  })();
+</script>
+<script src="/app.js?v=46"></script>
 </body>
 </html>

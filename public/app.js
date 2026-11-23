@@ -147,7 +147,9 @@
     const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal, docs: pDocs }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
-    $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
+    let html;
+    try { html = page(); } catch (e) { console.error(e); html = `<div class="card" style="margin-top:80px;border-color:rgba(255,122,107,.5)"><b style="color:#ff9585">This page hit an error</b><div class="sub mono" style="margin-top:8px;word-break:break-word">${esc(String(e && (e.stack || e.message) || e).slice(0, 600))}</div><button class="btn" style="margin-top:12px" onclick="location.hash='';location.reload()">Go Home</button></div>`; }
+    $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${html}</div>`;
     tabBar();
     if (fresh) countUp();
     else $app.querySelectorAll(".grid.enterTiles").forEach((g) => g.classList.remove("enterTiles"));
