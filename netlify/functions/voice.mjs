@@ -12,23 +12,20 @@ export default async (req) => {
   const what = new URL(req.url).pathname.split("/").pop();
 
   if (what === "hear") {
+    // Transcribe with Gemini through the AI Gateway (the phone sends 16 kHz WAV).
     const buf = await req.arrayBuffer();
     if (!buf.byteLength || buf.byteLength > 8 * 1024 * 1024) return json({ error: "No audio" }, 400);
-    const ct = req.headers.get("content-type") || "audio/mp4";
-    const ext = /webm/.test(ct) ? "webm" : /ogg/.test(ct) ? "ogg" : /wav/.test(ct) ? "wav" : "m4a";
-    let last = "";
-    for (const model of ["gpt-4o-mini-transcribe", "whisper-1"]) {
-      const fd = new FormData();
-      fd.append("file", new Blob([buf], { type: ct }), "speech." + ext);
-      fd.append("model", model);
-      fd.append("language", "en");
-      fd.append("prompt", "Jeff talking to his assistant Gerald about his calendar, to-dos, Trim Wellness sales, Meineke stores, packages, money, and his gun vault.");
-      const r = await fetch(base() + "/audio/transcriptions", { method: "POST", headers: auth(), body: fd }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
-      if (r.ok) { const d = await r.json(); return json({ text: String(d.text || "").trim() }); }
-      last = `${r.status} ${(await r.text()).slice(0, 160)}`;
-    }
-    console.error("hear failed", last);
-    return json({ error: "Couldn’t hear that", why: last }, 502);
+    const mime = (req.headers.get("content-type") || "audio/wav").split(";")[0];
+    const data = Buffer.from(buf).toString("base64");
+    const gb = (v("GOOGLE_GEMINI_BASE_URL") || "https://generativelanguage.googleapis.com").replace(/\/$/, "");
+    const r = await fetch(gb + "/v1beta/models/gemini-3-flash-preview:generateContent", {
+      method: "POST", headers: { "x-goog-api-key": v("GEMINI_API_KEY"), "content-type": "application/json" },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data } }, { text: "Transcribe exactly what the speaker says, in English. Context: Jeff is talking to his assistant Gerald about his calendar, to-dos, Trim Wellness sales, Meineke stores, packages, money and his gun vault. Return only the spoken words, no quotes or notes. If there is no speech, return an empty string." }] }], generationConfig: { temperature: 0 } }),
+    }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
+    if (!r.ok) { const why = `${r.status} ${(await r.text()).replace(/\s+/g, " ").slice(0, 160)}`; console.error("hear failed", why); return json({ error: "Couldn’t hear that", why }, 502); }
+    const d = await r.json();
+    const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim().replace(/^["“]|["”]$/g, "");
+    return json({ text });
   }
 
   if (what === "say") {

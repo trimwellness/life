@@ -1376,12 +1376,13 @@
   function browserVoice() {
     if (VOICE.bvoice) return VOICE.bvoice;
     const vs = ("speechSynthesis" in window ? speechSynthesis.getVoices() : []) || [];
-    return (VOICE.bvoice = ["Daniel", "Arthur", "Oliver", "Aaron", "Alex"].map((n) => vs.find((x) => x.name.startsWith(n) && /en/i.test(x.lang))).find(Boolean) || vs.find((x) => /en-GB/i.test(x.lang)) || vs.find((x) => /en-US/i.test(x.lang)) || null);
+    return (VOICE.bvoice = ["Daniel (Premium)", "Daniel (Enhanced)", "Arthur (Premium)", "Arthur (Enhanced)", "Oliver (Premium)", "Oliver (Enhanced)", "Evan (Premium)", "Evan (Enhanced)", "Daniel", "Arthur", "Aaron"].map((n) => vs.find((x) => x.name.startsWith(n) && /en/i.test(x.lang))).find(Boolean) || vs.find((x) => /en-GB/i.test(x.lang)) || vs.find((x) => /en-US/i.test(x.lang)) || null);
   }
   async function speak(text) {
     const t = speakable(text); if (!t || !VOICE.on) return;
     stopSpeaking();
     try {
+      throw new Error("phone voice"); // the AI Gateway has no speech model yet; use the iPhone's own voice
       const r = await fetch("/voice/say", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ text: t }) });
       if (!r.ok) throw new Error("tts");
       const url = URL.createObjectURL(await r.blob());
@@ -1405,7 +1406,7 @@
   async function listen() {
     if (VOICE.listening) return stopListening();
     unlockAudio(); stopSpeaking();
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SR = /iPhone|iPad|iPod/.test(navigator.userAgent) ? null : window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) {
       try {
         const rec = new SR(); VOICE.rec = rec; rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false;
@@ -1437,8 +1438,8 @@
         if (!heard) { micUI("idle"); return; }
         micUI("thinking");
         try {
-          const blob = new Blob(chunks, { type: mr.mimeType || "audio/mp4" });
-          const r = await fetch("/voice/hear", { method: "POST", headers: { "content-type": blob.type, authorization: "Bearer " + token }, body: blob });
+          const blob = await toWav(new Blob(chunks, { type: mr.mimeType || "audio/mp4" }));
+          const r = await fetch("/voice/hear", { method: "POST", headers: { "content-type": "audio/wav", authorization: "Bearer " + token }, body: blob });
           const d = await r.json().catch(() => ({}));
           micUI("idle", "");
           if (!r.ok) throw new Error(d.error + (d.why ? ` (${d.why})` : ""));
@@ -1447,6 +1448,21 @@
       };
       mr.start();
     } catch (e) { VOICE.listening = false; micUI("idle"); toast(/denied|NotAllowed/i.test(e.name + e.message) ? "Allow the microphone for Life in Settings" : "Mic didn’t start"); }
+  }
+  // Recordings become 16 kHz mono WAV, which every transcriber accepts.
+  async function toWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext, ctx = new AC();
+    const audio = await new Promise((ok, no) => blob.arrayBuffer().then((b) => ctx.decodeAudioData(b, ok, no)));
+    ctx.close().catch(() => {});
+    const rate = 16000, len = Math.ceil(audio.duration * rate);
+    const off = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, len, rate);
+    const src = off.createBufferSource(); src.buffer = audio; src.connect(off.destination); src.start();
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const out = new DataView(new ArrayBuffer(44 + pcm.length * 2)), w = (o, t) => [...t].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
+    w(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true);
+    return new Blob([out], { type: "audio/wav" });
   }
   function stopListening() { try { VOICE.rec?.stop(); } catch (_) {} try { if (VOICE.media?.state === "recording") VOICE.media.stop(); } catch (_) {} }
   if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => (VOICE.bvoice = null);
