@@ -85,7 +85,7 @@
   const route = () => location.hash.replace(/^#/, "").split("?")[0];
   window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim" || route() === "pkgs") loadTrim(); });
   const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["guns", "Vault", "shield"], ["more", "More", "grid"]];
-  const MORE = ["todo", "pkgs", "wish", "photos", "keys", "cal"];
+  const MORE = ["todo", "pkgs", "wish", "photos", "keys", "cal", "docs"];
   const ICON = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
@@ -95,6 +95,12 @@
     gift: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12.5h18M12 8C10 4 6 4 6 6.5S12 8 12 8zm0 0c2-4 6-4 6-1.5S12 8 12 8z"/>',
     lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/>',
     cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14" r="1"/><circle cx="12" cy="14" r="1"/>',
+    id: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.6 1.7-2.3 3-2.3s2.4.7 3 2.3M14 10h4M14 13.5h3"/>',
+    leaf: '<path d="M12 21v-6M12 15c-4-1-7-4-8-9 4 0 7 2 8 5 1-3 4-5 8-5-1 5-4 8-8 9z"/>',
+    car: '<path d="M4 16v-3.5l2-4.5h12l2 4.5V16M3 16h18v3H3zM7 19v1.5M17 19v1.5"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
+    globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.3-3.5-8.5s1-6 3.5-8.5z"/>',
+    plus: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
+    doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -102,7 +108,7 @@
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
   const top = (title, right = "") => {
     const isTab = TABS.some(([r]) => r === route());
-    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted", Calendar: "Schedule" }[title] || "Life";
+    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted", Calendar: "Schedule", Documents: "Encrypted" }[title] || "Life";
     return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1 data-eyebrow="${eyebrow}">${title}</h1>`;
   };
 
@@ -130,7 +136,7 @@
     const nx = upcoming(1)[0];
     sheet(`<div class="more-h">Everything</div><div class="more-g">
       ${t("cal", "cal", "Calendar", nx ? esc(nx[1].title).slice(0, 18) : "Nothing soon")}${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
-      ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}
+      ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}${t("docs", "id", "Documents", PW.key ? `${(PW.vault.docs || []).length} saved` : "Locked")}
       </div>`);
     document.getElementById("modal")?.classList.add("more-modal");
   }
@@ -138,7 +144,7 @@
   let lastRoute = null;
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal, docs: pDocs }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
     $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${page()}</div>`;
@@ -884,7 +890,7 @@
     const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return b64e(out);
   }
   async function pwDecrypt(key, data) { const raw = b64d(data); return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12)))); }
-  function pwLock() { PW.key = null; PW.vault = null; PW.reveal = {}; clearTimeout(PW.timer); closeSheet(); if (route() === "keys") render(); }
+  function pwLock() { try { Object.values(DOCST.urls).forEach((u) => URL.revokeObjectURL(u)); DOCST.urls = {}; } catch (_) {} PW.key = null; PW.vault = null; PW.reveal = {}; clearTimeout(PW.timer); closeSheet(); if (["keys", "docs"].includes(route())) render(); }
   const pwTouch = () => { clearTimeout(PW.timer); if (PW.key) PW.timer = setTimeout(pwLock, 5 * 60e3); };
   let pwHidden = 0;
   document.addEventListener("visibilitychange", () => { if (document.hidden) pwHidden = Date.now(); else if (PW.key && Date.now() - pwHidden > 60e3) pwLock(); });
@@ -915,7 +921,7 @@
       return head + `<div class="lux pw-lockcard" style="--i:0"><div class="pw-lockic">${svg("lock")}</div>
         <div class="hero-num" style="font-size:26px;text-align:center">${first ? "Create your master password" : "Locked"}</div>
         <div class="sub" style="text-align:center;margin:6px 0 16px">${first ? "Everything is encrypted on this phone with it. Nobody can reset it, not even me, so pick something you won't forget." : "Enter your master password."}</div>
-        <form data-form="${first ? "pw-create" : "pw-unlock"}"><input name="m" type="password" autocomplete="off" placeholder="Master password" required minlength="${first ? 10 : 1}">
+        <form data-form="${first ? "pw-create" : "pw-unlock"}"><input name="m" type="password" autocomplete="off" placeholder="Master password" required minlength="${first ? 6 : 1}">
         ${first ? `<input name="m2" type="password" autocomplete="off" placeholder="Type it again" required style="margin-top:8px">` : ""}
         <div class="err">${esc(PW.err)}</div><button class="btn" style="width:100%;margin-top:10px" ${PW.busy ? "disabled" : ""}>${PW.busy ? "Working…" : first ? "Create vault" : "Unlock"}</button></form></div>`;
     }
@@ -991,7 +997,7 @@
       await pwPersist(); closeSheet(); render(); toast("Saved");
     }
     if (kind === "pw-newmaster") {
-      if (v.m.length < 10) throw new Error("Use at least 10 characters");
+      if (v.m.length < 6) throw new Error("Use at least 6 characters");
       if (v.m !== v.m2) throw new Error("Those don’t match");
       const salt = crypto.getRandomValues(new Uint8Array(16));
       PW.key = await pwDerive(v.m, salt, PW_ITER); PW.meta = { ...PW.meta, salt: b64e(salt), iter: PW_ITER };
@@ -1174,6 +1180,118 @@
     if (skip) toast("Skipped");
   }
 
+  // ---------- Documents: ID cards & papers, encrypted with the Passwords master password ----------
+  const DOC_TYPES = [["dl", "Driver’s License", "id"], ["ccw", "Concealed Carry Permit", "shield"], ["mmj", "Medical Marijuana Card", "leaf"], ["auto", "Vehicle Insurance", "car"], ["ssn", "Social Security Card", "id"], ["passport", "Passport", "globe"], ["health", "Health Insurance", "plus"], ["reg", "Vehicle Registration", "car"], ["other", "Other", "doc"]];
+  const DOCST = { view: {}, urls: {}, up: false };
+  const dt = (k) => DOC_TYPES.find(([x]) => x === k) || DOC_TYPES[DOC_TYPES.length - 1];
+  const docList = () => (PW.vault.docs = PW.vault.docs || []);
+  async function encBytes(u8) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, PW.key, u8)); const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out; }
+  async function decBytes(u8) { return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u8.slice(0, 12) }, PW.key, u8.slice(12))); }
+  async function docFileUrl(f) {
+    if (DOCST.urls[f.fid]) return DOCST.urls[f.fid];
+    const r = await fetch("/api/pw/file/" + f.fid, { headers: { authorization: "Bearer " + token } });
+    if (!r.ok) throw new Error("Couldn’t load file");
+    const u = URL.createObjectURL(new Blob([await decBytes(new Uint8Array(await r.arrayBuffer()))], { type: f.mime || "image/jpeg" }));
+    return (DOCST.urls[f.fid] = u);
+  }
+  function docExp(d) {
+    if (!d.expires) return "";
+    const days = Math.round((new Date(d.expires + "T12:00:00") - new Date(todayKey() + "T12:00:00")) / 864e5);
+    const when = new Date(d.expires + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    if (days < 0) return `<span class="pill bad">Expired ${when}</span>`;
+    if (days <= 60) return `<span class="pill warn">Expires in ${days} day${days === 1 ? "" : "s"}</span>`;
+    return `<span class="pill">Expires ${when}</span>`;
+  }
+  function pDocs() {
+    const lockBtn = PW.key ? `<button class="btn ghost sm" data-act="pw-lock">Lock</button>` : "";
+    const head = top("Documents", PW.key ? `<button class="btn ghost sm" data-act="doc-new">+ Add</button>` : "").replace('<div style="flex:1"></div>', `<div style="flex:1"></div>${lockBtn}<span style="width:8px"></span>`);
+    if (!PW.key) return pKeys().replace(/^[\s\S]*?(<div class="lux pw-lockcard")/, head + "$1").replace("Enter your master password.", "Documents are encrypted with your Passwords master password.");
+    const L = docList().slice().sort((a, b) => DOC_TYPES.findIndex(([k]) => k === a.type) - DOC_TYPES.findIndex(([k]) => k === b.type));
+    setTimeout(docThumbs, 0);
+    return head + (L.length ? `<div class="doc-g">${L.map((d, i) => `<button class="doc-c" data-act="doc-open" data-id="${d.id}" style="--d:${i * 50}ms">
+        <span class="doc-img" data-thumb="${d.files?.[0]?.mime?.startsWith("image") ? d.files[0].fid : ""}">${svg(dt(d.type)[2])}</span>
+        <b>${esc(d.name || dt(d.type)[1])}</b>${docExp(d) || `<small>${d.files?.length ? d.files.length + " file" + (d.files.length > 1 ? "s" : "") : "No scans yet"}</small>`}</button>`).join("")}</div>`
+      : `<div class="empty">No documents yet.<br><button class="btn" data-act="doc-new" style="margin-top:12px">Add your first</button></div>`)
+      + `<div class="sub" style="text-align:center;margin-top:16px">Encrypted on this phone · locks with Passwords</div>`;
+  }
+  async function docThumbs() {
+    for (const el of document.querySelectorAll(".doc-img[data-thumb]:not([data-done])")) {
+      el.dataset.done = 1; const fid = el.dataset.thumb; if (!fid) continue;
+      const d = docList().find((x) => x.files?.[0]?.fid === fid);
+      try { const u = await docFileUrl(d.files[0]); el.innerHTML = `<img src="${u}" alt="">`; } catch (_) {}
+    }
+  }
+  function docOpen(id) {
+    const d = docList().find((x) => x.id === id); if (!d) return;
+    const show = DOCST.view[id];
+    const row = (k, v, f, mask) => v ? `<div class="pw-row"><div class="grow"><div class="lbl">${k}</div><div class="pw-v ${mask ? "mono" : ""}">${mask && !show ? "•••• " + esc(String(v).slice(-4)) : esc(v)}</div></div>${mask ? `<button class="btn ghost sm" data-act="doc-show" data-id="${id}">${show ? "Hide" : "Show"}</button>` : ""}<button class="btn ghost sm" data-act="doc-copy" data-id="${id}" data-f="${f}">Copy</button></div>` : "";
+    sheet(`<div class="cal-dh"><span class="pw-av">${svg(dt(d.type)[2])}</span><div><h2 style="margin:0">${esc(d.name || dt(d.type)[1])}</h2><div class="sub">${esc(dt(d.type)[1])}</div></div></div>
+      <div class="doc-files">${(d.files || []).map((f, n) => `<button class="doc-f" data-act="doc-file" data-id="${id}|${n}"><span class="doc-fi" data-fid="${f.fid}">${f.mime === "application/pdf" ? "PDF" : "…"}</span><small>${esc(f.side || "")}</small></button>`).join("")}
+        <label class="doc-f add">${DOCST.up ? "<span>Uploading…</span>" : `<span>+</span><small>Photo / PDF</small>`}<input type="file" accept="image/*,application/pdf" multiple data-docupload="${id}" hidden></label></div>
+      ${row("Number", d.number, "number", true)}${row("Name on document", d.holder, "holder")}${row("Issued by", d.issuer, "issuer")}
+      ${d.issued ? `<div class="gv-kv"><span>Issued</span><b>${esc(d.issued)}</b></div>` : ""}${d.expires ? `<div class="gv-kv"><span>Expires</span><b>${esc(d.expires)}</b></div>` : ""}
+      ${d.notes ? `<div class="gv-notes" style="margin-top:12px">${esc(d.notes)}</div>` : ""}
+      <div class="actions"><button type="button" class="btn danger" data-act="doc-del" data-id="${id}">Delete</button><span class="sp"></span><button class="btn ghost" data-act="close">Close</button><button class="btn" data-act="doc-edit" data-id="${id}">Edit</button></div>`);
+    document.querySelectorAll(".doc-fi[data-fid]").forEach(async (el) => { const f = d.files.find((x) => x.fid === el.dataset.fid); if (f.mime === "application/pdf") return; try { el.innerHTML = `<img src="${await docFileUrl(f)}" alt="">`; } catch (_) { el.textContent = "!"; } });
+  }
+  function docForm(d = {}) {
+    sheet(`<h2>${d.id ? "Edit" : "Add"} document</h2><form data-form="doc-save" data-id="${d.id || ""}">
+      <label>Type</label><select name="type">${DOC_TYPES.map(([k, n]) => `<option value="${k}" ${(d.type || "dl") === k ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <label>Label (optional)</label><input name="name" value="${esc(d.name || "")}" placeholder="e.g. Jeff’s license, Lindsey’s card">
+      <label>Number</label><input name="number" value="${esc(d.number || "")}" autocomplete="off" autocapitalize="characters" class="mono">
+      <label>Name on document</label><input name="holder" value="${esc(d.holder || "")}">
+      <label>Issued by</label><input name="issuer" value="${esc(d.issuer || "")}" placeholder="e.g. PennDOT, Cumberland County Sheriff, Progressive">
+      <div class="cal-2"><div><label>Issued</label><input type="date" name="issued" value="${esc(d.issued || "")}"></div><div><label>Expires</label><input type="date" name="expires" value="${esc(d.expires || "")}"></div></div>
+      <label class="doc-chk"><input type="checkbox" name="remind" ${d.id ? "" : "checked"}> Add a renewal reminder to Calendar (30 days before it expires)</label>
+      <label>Notes</label><textarea name="notes">${esc(d.notes || "")}</textarea>
+      ${d.id ? "" : `<label>Scans (front, back, PDF)</label><input type="file" name="files" accept="image/*,application/pdf" multiple>`}
+      <div class="actions"><span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">${DOCST.up ? "Saving…" : "Save"}</button></div></form>`);
+  }
+  async function docUploadFiles(list) {
+    const out = [];
+    for (const f of [...list]) {
+      const pdf = /pdf/i.test(f.type) || /\.pdf$/i.test(f.name);
+      let bytes, mime = "application/pdf";
+      if (pdf) bytes = new Uint8Array(await f.arrayBuffer());
+      else { const { im, u } = await loadImage(f); const k = Math.min(1, 2200 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement("canvas"); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); bytes = new Uint8Array(await (await toBlob(c, 0.86)).arrayBuffer()); mime = "image/jpeg"; }
+      const r = await fetch("/api/pw/file", { method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/octet-stream" }, body: await encBytes(bytes) });
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Upload failed");
+      out.push({ fid: d.id, mime, side: ["Front", "Back"][out.length] || (pdf ? "PDF" : "Photo") });
+    }
+    return out;
+  }
+  async function docSubmit(f) {
+    const fd = new FormData(f), id = f.dataset.id, L = docList(), old = L.find((x) => x.id === id) || {};
+    const d = { ...old, id: id || newPwId(), type: fd.get("type"), name: String(fd.get("name") || "").trim(), number: String(fd.get("number") || "").trim(), holder: String(fd.get("holder") || "").trim(), issuer: String(fd.get("issuer") || "").trim(), issued: fd.get("issued") || "", expires: fd.get("expires") || "", notes: String(fd.get("notes") || ""), files: old.files || [] };
+    const picks = fd.getAll("files").filter((x) => x && x.size);
+    if (picks.length) { DOCST.up = true; toast("Encrypting & uploading…"); try { d.files = [...d.files, ...(await docUploadFiles(picks))]; } finally { DOCST.up = false; } }
+    const i = L.findIndex((x) => x.id === d.id); i >= 0 ? (L[i] = d) : L.push(d);
+    await pwPersist();
+    if (fd.get("remind") && d.expires) {
+      const t = new Date(d.expires + "T12:00:00"); t.setDate(t.getDate() - 30); const when = dkey(t) < todayKey() ? todayKey() : dkey(t);
+      const nm = d.name || dt(d.type)[1];
+      await save("events", { title: `Renew ${nm}`, kind: "personal", date: when, time: "", end: "", repeat: "none", until: "", reminders: [0], location: "", notes: `${nm} expires ${d.expires}.`, days: [] }).catch(() => {});
+    }
+    closeSheet(); render(); toast("Saved");
+  }
+  document.addEventListener("change", async (e) => {
+    if (!e.target.matches("input[data-docupload]")) return;
+    const id = e.target.dataset.docupload, list = e.target.files; e.target.value = "";
+    const d = docList().find((x) => x.id === id); if (!d || !list.length) return;
+    DOCST.up = true; docOpen(id);
+    try { d.files = [...(d.files || []), ...(await docUploadFiles(list))]; await pwPersist(); toast("Added"); } catch (x) { toast(x.message); }
+    DOCST.up = false; docOpen(id); render();
+  });
+  async function docViewFile(id, n) {
+    const d = docList().find((x) => x.id === id), f = d?.files?.[n]; if (!f) return;
+    let u; try { u = await docFileUrl(f); } catch (x) { return toast(x.message); }
+    if (f.mime === "application/pdf") { const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.download = (d.name || dt(d.type)[1]) + ".pdf"; a.click(); return; }
+    const v = document.createElement("div"); v.className = "pv-view"; v.id = "docview";
+    v.innerHTML = `<img src="${u}" alt=""><div class="pv-bar"><span>${esc(d.name || dt(d.type)[1])} · ${esc(f.side || "")}</span></div><div class="pv-tools"><button data-dv="del" class="bad">Remove</button></div><button class="pv-x" data-dv="close">×</button>`;
+    v.addEventListener("click", async (e) => { const a = e.target.closest("[data-dv]")?.dataset.dv; if (a === "close" || e.target === v) v.remove(); if (a === "del" && confirmDel()) { d.files.splice(n, 1); await pwPersist(); fetch("/api/pw/file/" + f.fid, { method: "DELETE", headers: { authorization: "Bearer " + token } }); v.remove(); docOpen(id); } });
+    document.body.appendChild(v);
+  }
+
   // ---------- Gerald ----------
   const chat = { msgs: [], busy: false };
   const SUGGEST = ["Brief me on today", "How's Trim doing this week?", "What's coming in?", "What did I spend on gas this month?"];
@@ -1203,7 +1321,7 @@
     if (!q || chat.busy) return;
     chat.msgs.push({ role: "user", content: q }); chat.busy = true; openGerald();
     try {
-      const pw = PW.key ? PW.vault.items.map((x) => ({ id: x.id, t: x.title, u: x.user, h: host(x.url), c: x.cat || "" })) : PW.meta && !PW.meta.empty ? "locked" : null;
+      const pw = PW.key ? [...PW.vault.items.map((x) => ({ id: x.id, t: x.title, u: x.user, h: host(x.url), c: x.cat || "" })), ...(PW.vault.docs || []).map((d) => ({ id: d.id, t: (d.name || dt(d.type)[1]) + " (document)", u: "", h: "", c: d.expires ? "expires " + d.expires : "document" }))] : PW.meta && !PW.meta.empty ? "locked" : null;
       const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
       if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; render(); }
@@ -1287,6 +1405,13 @@
         case "ev-del": if (confirmDel()) { await remove("events", id); closeSheet(); toast("Deleted"); } break;
         case "close-more": closeSheet(); break;
         case "pw-lock": pwLock(); break;
+        case "doc-new": docForm(); break;
+        case "doc-open": docOpen(id); break;
+        case "doc-edit": docForm(docList().find((x) => x.id === id)); break;
+        case "doc-show": DOCST.view[id] = !DOCST.view[id]; docOpen(id); break;
+        case "doc-copy": { const d = docList().find((x) => x.id === id); if (d) pwCopy(d[el.dataset.f] || ""); break; }
+        case "doc-file": { const [i, n] = id.split("|"); docViewFile(i, +n); break; }
+        case "doc-del": if (confirmDel()) { const d = docList().find((x) => x.id === id); PW.vault.docs = docList().filter((x) => x.id !== id); await pwPersist(); (d?.files || []).forEach((f) => fetch("/api/pw/file/" + f.fid, { method: "DELETE", headers: { authorization: "Bearer " + token } })); closeSheet(); render(); toast("Deleted"); } break;
         case "pw-cat": PW.cat = PW.cat === id ? "" : id; render(); break;
         case "pw-g": { if (!PW.key) { toast("Unlock Passwords first"); document.getElementById("gmodal")?.remove(); location.hash = "keys"; break; } const x = pwItem(id); if (x) pwOpen(x); else toast("That login isn’t here anymore"); break; }
         case "pw-new": pwForm(); break;
@@ -1337,6 +1462,7 @@
         case "ev-save": { const fd = new FormData(f); const body = { title: v.title, kind: fd.get("kind") || "other", date: v.date, time: v.time, end: v.end, repeat: v.repeat, days: fd.getAll("dw").map(Number), until: v.repeat === "none" ? "" : v.until, location: v.location, notes: v.notes, reminders: fd.getAll("rem").map(Number) };
           const old = f.dataset.id && D.events.find((x) => x.id === f.dataset.id); await save("events", { ...(old || {}), ...body, ...(old ? { id: old.id } : {}) }); closeSheet(); CAL.sel = body.date; CAL.month = body.date.slice(0, 7);
           if (typeof Notification !== "undefined" && Notification.permission !== "granted" && body.reminders.length) toast("Turn on reminders on the Calendar page to get alerts"); else toast("Saved"); break; }
+        case "doc-save": await docSubmit(f); break;
         case "pw-create": case "pw-unlock": case "pw-save": case "pw-newmaster": await pwSubmit(f, v); break;
         case "pv-album": {
           if (id) { const r = await api(`vault/albums/${id}`, { method: "PUT", body: { name: v.name } }); PV.album = { ...PV.album, name: r.name }; }
