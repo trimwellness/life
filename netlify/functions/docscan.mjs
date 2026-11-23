@@ -28,8 +28,15 @@ export default async (req) => {
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: f.data } }
     : { type: "image", source: { type: "base64", media_type: "image/jpeg", data: f.data } });
   content.push({ type: "text", text: PROMPT });
+  const ask = (c) => ai.messages.create({ model: MODEL, max_tokens: 700, messages: [{ role: "user", content: c }] });
   try {
-    const r = await ai.messages.create({ model: MODEL, max_tokens: 700, messages: [{ role: "user", content }] });
+    let r;
+    try { r = await ask(content); }
+    catch (e) {
+      // If a PDF was the problem, try again with just the photos.
+      const imgs = content.filter((c) => c.type !== "document");
+      if (imgs.length > 1 && imgs.length < content.length) r = await ask(imgs); else throw e;
+    }
     const txt = r.content.filter((c) => c.type === "text").map((c) => c.text).join("");
     const m = txt.match(/\{[\s\S]*\}/);
     const d = m ? JSON.parse(m[0]) : {};
@@ -37,8 +44,9 @@ export default async (req) => {
     const date = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(x || "") ? x : "");
     return json({ type: TYPES.includes(d.type) ? d.type : "other", name: s(d.name, 80), number: s(d.number, 60), holder: s(d.holder, 100), issuer: s(d.issuer, 100), issued: date(d.issued), expires: date(d.expires), notes: s(d.notes, 400) });
   } catch (e) {
-    console.error("docscan failed", e.status || "", String(e.message || e).slice(0, 120));
-    return json({ error: "Couldn’t read that one — fill it in by hand." }, 502);
+    const why = `${e.status || ""} ${String(e.message || e)}`.trim().slice(0, 200);
+    console.error("docscan failed", why);
+    return json({ error: "Couldn’t read it", why }, 502);
   }
 };
 

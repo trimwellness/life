@@ -437,7 +437,7 @@ form[data-form="ev-save"] input[type=date]::-webkit-date-and-time-value,form[dat
 .doc-f.add>span{border-style:dashed;font-size:24px;letter-spacing:0}
 .doc-f small{font-size:11px;color:#8d8471}
 .doc-chk{display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:14px;color:#cfc6b0;margin:12px 0 4px}
-.doc-chk input{width:auto;margin-top:3px}
+.doc-chk input{width:20px!important;height:20px;flex:none;display:inline-block!important;margin:2px 0 0!important;accent-color:#d4af37}
 .pw-av svg{width:20px;height:20px;stroke:#1a1306}
 .cal-dh{display:flex;gap:12px;align-items:stretch;margin-bottom:10px}
 .hc-row{display:flex;align-items:center;gap:10px;padding:7px 0}
@@ -505,7 +505,7 @@ body.on-home .gfab{display:none}
 .spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(212,175,55,.25);border-top-color:var(--gold2);animation:spin .8s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 form[data-form="doc-save"] .filled{border-color:rgba(127,217,154,.55)!important}
-form[data-form="doc-save"] input,form[data-form="doc-save"] select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block}
+form[data-form="doc-save"] input:not([type=checkbox]),form[data-form="doc-save"] select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;display:block}
 form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
 </style>
 </head>
@@ -529,6 +529,6 @@ form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:n
     setTimeout(function () { var a = document.getElementById("app"); if (a && !a.children.length && !document.getElementById("boot-err")) show("Nothing rendered after 8 seconds."); }, 8000);
   })();
 </script>
-<script src="/app.js?v=48"></script>
+<script src="/app.js?v=49"></script>
 </body>
 </html>

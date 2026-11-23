@@ -1297,13 +1297,15 @@
       for (const f of [...list]) DOCST.pending.push(await docPrep(f));
       pend.innerHTML = DOCST.pending.map((p, i) => `<span class="doc-fi">${p.preview ? `<img src="${p.preview}" alt="">` : "PDF"}<small>${["Front", "Back"][i] || "Page " + (i + 1)}</small></span>`).join("");
       st.innerHTML = `<span class="spin"></span> Reading your document…`;
-      const r = await api("/docscan", { method: "POST", body: { files: DOCST.pending.slice(0, 3).map((p) => p.ai) } });
+      const res = await fetch("/docscan", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ files: DOCST.pending.slice(0, 3).map((p) => p.ai) }) });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((r.error || "Couldn’t read it") + (r.why ? ` (${r.why})` : ""));
       const set = (n, v) => { if (v && F[n] && !F[n].value) F[n].value = v; };
       if (r.type) F.type.value = r.type;
       ["name", "number", "holder", "issuer", "issued", "expires", "notes"].forEach((n) => set(n, r[n]));
       F.querySelectorAll("input,select,textarea").forEach((x) => { if (x.value && ["type", "name", "number", "holder", "issuer", "issued", "expires", "notes"].includes(x.name)) x.classList.add("filled"); });
       st.innerHTML = `<span class="ok">✓</span> Filled in from your scan — give it a quick check.`;
-    } catch (e) { st.innerHTML = `<span class="bad">!</span> ${esc(e.message || "Couldn’t read it")} — the scan will still be saved.`; }
+    } catch (e) { st.innerHTML = `<span class="bad">!</span> <span>${esc(e.message || "Couldn’t read it")}. Fill it in by hand — the scan will still be saved.</span>`; }
   }
   async function docUploadPrepared(list) {
     const out = [];
