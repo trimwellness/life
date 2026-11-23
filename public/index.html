@@ -446,6 +446,43 @@ form[data-form="ev-save"] input[type=date]::-webkit-date-and-time-value,form[dat
 .hc-when small{display:block;color:var(--gold2);font-size:12px}
 .hc-t{flex:1;min-width:0;font-size:15px;color:#f6efdc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hc-row .cal-bar{min-height:28px}
+
+/* Home v3: ticker, today timeline, chronograph sub-dials */
+.ticker{position:relative;margin:2px -16px 12px;overflow:hidden;border-top:1px solid rgba(212,175,55,.35);border-bottom:1px solid rgba(212,175,55,.35);background:linear-gradient(90deg,rgba(5,5,5,.95),rgba(22,19,13,.85) 50%,rgba(5,5,5,.95));-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);animation:fade .6s both}
+.tk-track{display:flex;align-items:center;width:max-content;white-space:nowrap;padding:9px 0;animation:tk var(--dur) linear infinite;will-change:transform}
+.ticker:active .tk-track{animation-play-state:paused}
+@keyframes tk{to{transform:translate3d(-50%,0,0)}}
+.tk-track a{display:inline-flex;align-items:baseline;gap:7px;padding:0 14px;color:#f6efdc;text-decoration:none;font:500 14px -apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.tk-track a i{font-style:normal;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.tk-track b{font-weight:600;font-size:12px}.tk-track b.up{color:#7fd99a}.tk-track b.down{color:#ff8f7d}
+.tk-dot{color:rgba(212,175,55,.55);font-size:8px}
+.hero + .ticker{margin-top:-4px}
+.askbar{margin:0 0 12px;width:100%;max-width:none}
+.today{padding:14px 16px 12px}
+.tl{position:relative;margin-top:4px}
+.tl::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:1px;background:linear-gradient(180deg,rgba(212,175,55,.6),rgba(212,175,55,.1))}
+.tl-r{display:flex;align-items:center;gap:12px;padding:7px 0;position:relative}
+.tl-n{flex:none;width:11px;height:11px;border-radius:50%;background:#0b0a08;border:2px solid var(--c);box-shadow:0 0 8px var(--c)}
+.tl-w{flex:none;width:74px;font-size:12.5px;color:var(--gold2);font-variant-numeric:tabular-nums}
+.tl-t{flex:1;min-width:0;font-size:15px;color:#f6efdc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-r.past{opacity:.45}.tl-r.past .tl-n{box-shadow:none}
+.tl-more{font-size:12px;color:#8d8471;padding:2px 0 0 23px}
+.tl-clear{font-size:14.5px;color:#cfc6b0;padding:4px 0 2px}.tl-clear b{color:#f6efdc;font-weight:500}
+.dials{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;margin:16px 0 6px}
+.dial{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:inherit;animation:up .5s both;animation-delay:calc(var(--i) * 45ms)}
+.dial-o{position:relative;width:min(19vw,78px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 35%,#211c14,#070706 70%);box-shadow:inset 0 0 0 1px rgba(212,175,55,.28),0 10px 22px -10px rgba(0,0,0,.95),inset 0 2px 6px rgba(255,236,190,.06)}
+.dial-o svg{position:absolute;inset:0;width:100%;height:100%}
+.dial .dt{fill:none;stroke:rgba(212,175,55,.14);stroke-width:2.5}
+.dial .dk{stroke:rgba(212,175,55,.55);stroke-width:1}
+.dial .da{fill:none;stroke:url(#none);stroke:#e2c060;stroke-width:2.5;stroke-linecap:round;stroke-dashoffset:var(--off);animation:dial 1.2s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 60ms + .2s);filter:drop-shadow(0 0 3px rgba(226,192,96,.5))}
+@keyframes dial{from{stroke-dashoffset:170}}
+.dial-v{position:absolute;inset:0;display:grid;place-items:center;font:400 17px "Didot","Bodoni 72",Georgia,serif;color:#fbf3dc;font-variant-numeric:lining-nums tabular-nums;letter-spacing:-.01em}
+.dial-v svg{position:static;width:20px;height:20px;stroke:var(--gold2)}
+.dial-l{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:#a89c80;white-space:nowrap}
+.dial:active .dial-o{transform:scale(.94)}
+body.on-home .gfab{display:none}
+.wl{display:flex;align-items:center;gap:10px;margin:14px 2px 0;padding:12px 4px;border-top:1px solid rgba(212,175,55,.14);color:#cfc6b0;text-decoration:none;font-size:14px;animation:up .5s both;animation-delay:.45s}
+.wl svg{width:18px;height:18px;stroke:var(--gold2)}.wl span:nth-child(2){flex:1}
 </style>
 </head>
 <body>
@@ -468,6 +505,6 @@ form[data-form="ev-save"] input[type=date]::-webkit-date-and-time-value,form[dat
     setTimeout(function () { var a = document.getElementById("app"); if (a && !a.children.length && !document.getElementById("boot-err")) show("Nothing rendered after 8 seconds."); }, 8000);
   })();
 </script>
-<script src="/app.js?v=46"></script>
+<script src="/app.js?v=47"></script>
 </body>
 </html>

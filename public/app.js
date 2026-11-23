@@ -151,6 +151,7 @@
     try { html = page(); } catch (e) { console.error(e); html = `<div class="card" style="margin-top:80px;border-color:rgba(255,122,107,.5)"><b style="color:#ff9585">This page hit an error</b><div class="sub mono" style="margin-top:8px;word-break:break-word">${esc(String(e && (e.stack || e.message) || e).slice(0, 600))}</div><button class="btn" style="margin-top:12px" onclick="location.hash='';location.reload()">Go Home</button></div>`; }
     $app.innerHTML = `<div class="${fresh ? "enter" : ""}">${html}</div>`;
     tabBar();
+    document.body.classList.toggle("on-home", !r);
     if (fresh) countUp();
     else $app.querySelectorAll(".grid.enterTiles").forEach((g) => g.classList.remove("enterTiles"));
     if (!fresh) $app.querySelectorAll("[data-count]").forEach((el) => (el.textContent = fmtCount(el)));
@@ -298,12 +299,48 @@
         <div class="tsm-cols"><span><i>Wk</i> ${usd(trim.wtd.sales, false)}</span><span><i>Mo</i> ${usd(trim.mtd.sales, false)}</span><span><i>Yr</i> ${usd(trim.ytd.sales, false)}</span></div>`;
     }
 
-    const box = (href, ic, title, val, sub, i, fmt) => `<a class="lux qbox" href="#${href}" style="--i:${i}"><div class="lux-h"><span>${title}</span><span class="aic">${svg(ic)}</span></div>
-      <div class="qv">${val === "" ? `<span class="qlock">${svg("lock")}</span>` : n(val, fmt)}</div><div class="qs">${sub}</div></a>`;
-    const row = (href, ic, title, sub, val, i) => `<a class="arow" href="#${href}" style="--i:${i}"><span class="aic">${svg(ic)}</span>
-      <span class="grow"><span class="at">${title}</span><span class="as">${sub}</span></span><span class="av">${val}</span><span class="chev">›</span></a>`;
-    const nextTodo = open[0] ? esc(open[0].text) + (open[0].due ? ` · ${open[0].due === today ? "today" : fmtDay(open[0].due)}` : "") : "Nothing open";
-    const nextPkg = ofd ? `${ofd} out for delivery` : active[0]?.status ? `${esc(active[0].label || "Package")} · ${esc(active[0].status)}` : `${active.length} personal · ${trimIn} Trim PO${trimIn === 1 ? "" : "s"}`;
+    // ---- Ticker: the whole picture in one gold ribbon
+    const k = (v) => { v = +v || 0; const a = Math.abs(v); return (v < 0 ? "-" : "") + "$" + (a >= 1e6 ? (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? (a / 1e3).toFixed(a >= 1e5 ? 0 : 1) + "k" : Math.round(a).toLocaleString()); };
+    const gvt = gvTotals();
+    const tdiff = trim?.ready ? trim.wtd.sales - trim.lastWeekToDate.sales : 0;
+    const tk = [];
+    if (money?.ready) { tk.push(["money", "Cash", usd(money.cash ?? 0, false)]); tk.push(["money", "Credit", usd(money.credit ?? 0, false)]); }
+    if (trim?.ready) { tk.push(["trim", "Trim today", usd(trim.daily.sales, false)]); tk.push(["trim", "Trim week", `${usd(trim.wtd.sales, false)} <b class="${tdiff >= 0 ? "up" : "down"}">${tdiff >= 0 ? "▲" : "▼"} ${k(Math.abs(tdiff))}</b>`]); tk.push(["trim", "Trim month", usd(trim.mtd.sales, false)]); tk.push(["trim", "Trim YTD", usd(trim.ytd.sales, false)]); }
+    if (gvt) tk.push(["guns", "Vault", usd(gvt.all, false)]);
+    if (active.length + trimIn) tk.push(["pkgs", "Incoming", `${active.length + trimIn}${ofd ? ` · ${ofd} today` : ""}`]);
+    const tkHTML = tk.map(([h, l, v]) => `<a href="#${h}"><i>${l}</i>${v}</a>`).join('<span class="tk-dot">◆</span>');
+    const ticker = tk.length ? `<div class="ticker" style="--i:0"><div class="tk-track" style="--dur:${Math.max(24, tk.length * 6)}s">${tkHTML}<span class="tk-dot">◆</span>${tkHTML}<span class="tk-dot">◆</span></div></div>` : "";
+
+    // ---- Today: one timeline of what matters (calendar, due to-dos, deliveries)
+    const now = new Date(), hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const tl = [];
+    for (const e of evOn(today)) if (!(e.done || []).includes(today)) tl.push({ t: e.time || "00:00", when: clk(e.time), what: e.title, c: (KIND[e.kind] || KIND.other)[1], href: "cal", past: e.time && (e.end || e.time) < hm });
+    open.filter((t) => t.due && t.due <= today).slice(0, 3).forEach((t) => tl.push({ t: "99:98", when: t.due < today ? "Overdue" : "Today", what: t.text, c: t.due < today ? "#ff9585" : "#d4af37", href: "todo" }));
+    active.filter((p) => p.statusCode === 4 || (p.eta && p.eta.slice(0, 10) === today)).forEach((p) => tl.push({ t: "99:99", when: "Arriving", what: p.label || "Package", c: "#8fb8ff", href: "pkgs" }));
+    tl.sort((x, y) => x.t.localeCompare(y.t));
+    const nx = !tl.length ? upcoming(2) : [];
+    const todayCard = `<a class="lux today" href="#cal" style="--i:1"><div class="lux-h"><span>Today · ${now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span><span class="chev">›</span></div>
+      ${tl.length ? `<div class="tl">${tl.slice(0, 4).map((x) => `<div class="tl-r ${x.past ? "past" : ""}" data-act="tl" data-id="${x.href}"><span class="tl-n" style="--c:${x.c}"></span><span class="tl-w">${esc(x.when)}</span><span class="tl-t">${esc(x.what)}</span></div>`).join("")}${tl.length > 4 ? `<div class="tl-more">+${tl.length - 4} more</div>` : ""}</div>`
+        : `<div class="tl-clear">Clear day.${nx.length ? ` Next: <b>${esc(nx[0][1].title)}</b> · ${esc(dayLabel(nx[0][0]).replace(/^(\w+day), /, ""))}${nx[0][1].time ? " " + clk(nx[0][1].time) : ""}` : ""}</div>`}</a>`;
+
+    // ---- Subdials: every section as a chronograph sub-dial
+    const C = 2 * Math.PI * 27;
+    const dial = (href, ic, label, val, frac, i) => `<a class="dial" href="#${href}" style="--i:${i}"><span class="dial-o"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" class="dt"/>${Array.from({ length: 12 }, (_, j) => `<line x1="32" y1="2.5" x2="32" y2="${j % 3 ? 4.5 : 6}" transform="rotate(${j * 30} 32 32)" class="dk"/>`).join("")}<circle cx="32" cy="32" r="27" class="da" style="stroke-dasharray:${C.toFixed(1)};--off:${(C * (1 - Math.max(0, Math.min(1, frac || 0)))).toFixed(1)}" transform="rotate(-90 32 32)"/></svg>
+      <span class="dial-v">${val === "" ? svg(ic) : val}</span></span><span class="dial-l">${label}</span></a>`;
+    const doneN = D.todo.filter((t) => t.done).length, evN = evOn(today).length;
+    const dayFrac = (now.getHours() * 60 + now.getMinutes()) / 1440;
+    const docs = PW.key ? (PW.vault.docs || []) : null, docsOk = docs ? docs.filter((d) => !d.expires || d.expires > today).length : 0;
+    const dials = `<div class="dials">
+      ${dial("todo", "check", "To-Do", open.length, open.length + doneN ? doneN / (open.length + doneN) : 1, 2)}
+      ${dial("pkgs", "box", "Incoming", active.length + trimIn, active.length ? ofd / active.length : 0, 3)}
+      ${dial("cal", "cal", "Calendar", evN, dayFrac, 4)}
+      ${dial("trim", "chart", "Trim wk", trim?.ready ? k(trim.wtd.sales) : "—", trim?.ready && trim.lastWeekToDate.sales ? trim.wtd.sales / trim.lastWeekToDate.sales : trim?.ready ? 1 : 0, 5)}
+      ${dial("guns", "shield", "Vault", gvt ? k(gvt.all) : "—", gvt ? 1 : 0, 6)}
+      ${dial("keys", "lock", "Passwords", PW.key ? PW.vault.items.length : "", PW.key ? 1 : 0, 7)}
+      ${dial("docs", "id", "Documents", docs ? docs.length : "", docs && docs.length ? docsOk / docs.length : 0, 8)}
+      ${dial("photos", "photo", "Photos", PV.albums ? PV.total || 0 : "", PV.albums ? 1 : 0, 9)}
+    </div>`;
+    const wishLine = wishes.length ? `<a class="wl" href="#wish" style="--i:10">${svg("gift")}<span>Wish list · ${wishes.length} item${wishes.length === 1 ? "" : "s"} · ${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)}</span><span class="chev">›</span></a>` : "";
 
     return `<section class="hero">
         <div class="spot"></div>
@@ -311,20 +348,10 @@
           <div class="watch">${watchSVG()}</div>
           <figure class="us"><picture><source srcset="/us.webp?v=6" type="image/webp"><img src="/us.png?v=6" alt="Jeff and Lindsey" draggable="false"></picture></figure>
         </div></div>
-        <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
       </section>
-      <a class="lux" href="#money" style="--i:0"><div class="lux-h"><span>Portfolio</span><span class="chev">›</span></div>${portfolio}</a>
-      ${(() => { const up = upcoming(3); return `<a class="lux lux-sm" href="#cal" style="--i:1"><div class="lux-h"><span>Calendar</span><span class="chev">›</span></div>
-        ${up.length ? up.map(([d, e]) => `<div class="hc-row"><span class="cal-bar" style="background:${(KIND[e.kind] || KIND.other)[1]}"></span><span class="hc-when">${esc(dayLabel(d).replace(/^(\w+day), /, ""))}<small>${clk(e.time)}</small></span><span class="hc-t">${esc(e.title)}</span></div>`).join("") : `<div class="sub">Nothing coming up. Tap to add.</div>`}</a>`; })()}
-      <a class="lux lux-sm" href="#trim" style="--i:1"><div class="lux-h"><span>Trim Wellness</span><span class="chev">›</span></div>${trimBody}</a>
-      <div class="quad">
-        ${box("todo", "check", "To-Do", open.length, late ? `<em>${late} due</em>${esc(open[0]?.text || "")}` : nextTodo, 2)}
-        ${box("pkgs", "box", "Incoming", active.length + trimIn, nextPkg, 3)}
-        ${box("wish", "gift", "Wish List", wishes.length, wishes.length ? usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false) + " total" : "Empty", 4)}
-        ${box("photos", "photo", "Photo Vault", PV.albums ? PV.total || 0 : 0, PV.albums ? `${PV.albums.length} album${PV.albums.length === 1 ? "" : "s"}` : "Your albums", 5)}
-        ${(() => { const t = gvTotals(); return box("guns", "shield", "Gun Vault", t ? Math.round(t.all) : 0, t ? `${GV.data.firearms.length} firearms · ${GV.data.nfa.length} NFA` : "Safe Ledger", 6, "usd"); })()}
-        ${box("keys", "lock", "Passwords", "", PW.key ? `${PW.vault.items.length} logins` : "Encrypted · tap to unlock", 7)}
-      </div>
+      ${ticker}
+      <button class="askbar" data-act="gerald"><span class="gdot">G</span><span class="grow">Ask Gerald anything…</span><span class="chev">›</span></button>
+      ${todayCard}${dials}${wishLine}
 `;
   }
 
@@ -1397,6 +1424,7 @@
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
         case "more": e.preventDefault(); moreSheet(); break;
+        case "tl": e.preventDefault(); location.hash = id; break;
         case "cal-day": CAL.sel = id; CAL.month = id.slice(0, 7); render(); break;
         case "cal-mo": { const [yy, mm] = CAL.month.split("-").map(Number), t2 = new Date(yy, mm - 1 + +id, 1); CAL.month = dkey(t2).slice(0, 7); render(); break; }
         case "ev-new": evForm({}, route() === "cal" ? CAL.sel : todayKey()); break;
