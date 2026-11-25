@@ -108,6 +108,7 @@
     wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
     belloff: '<path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l1.5 2H8"/><path d="M10 20.5a2 2 0 0 0 4 0M4 4l16 16"/>',
+    face: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 15.5c1.4 1.2 3.6 1.2 5 0"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -980,8 +981,54 @@
   const b64e = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
   const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   async function pwDerive(master, salt, iter) {
-    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(master), "PBKDF2", false, ["deriveKey"]);
-    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    // Same key as before (first 256 PBKDF2 bits as AES-GCM); the raw bytes are kept in memory only so Face ID can wrap them.
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(master), "PBKDF2", false, ["deriveBits"]);
+    const raw = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" }, base, 256));
+    PW._raw = raw;
+    return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  }
+  // ---- Face ID unlock: a passkey on this iPhone whose PRF secret unlocks a wrapped copy of the vault key.
+  const FID_KEY = "life.fid";
+  const fidSaved = () => { try { return JSON.parse(localStorage.getItem(FID_KEY) || "null"); } catch (_) { return null; } };
+  const fidSupported = () => !!(window.PublicKeyCredential && navigator.credentials);
+  async function fidPrf(cred, salt) {
+    const a = await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: "public-key", id: b64d(cred) }], userVerification: "required", timeout: 60000, extensions: { prf: { eval: { first: b64d(salt) } } } } });
+    const r = a.getClientExtensionResults()?.prf?.results?.first;
+    if (!r) throw new Error("This iPhone can’t do Face ID unlock for web apps (needs iOS 18 or newer).");
+    return new Uint8Array(r);
+  }
+  async function fidWrapKey(prf) { const k = await crypto.subtle.importKey("raw", await crypto.subtle.digest("SHA-256", prf), "HKDF", false, ["deriveKey"]); return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: new TextEncoder().encode("life-faceid"), info: new Uint8Array() }, k, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]); }
+  async function fidEnable() {
+    if (!PW.key || !PW._raw) return toast("Unlock with your master password first");
+    if (!fidSupported()) return toast("Face ID isn’t available here");
+    const salt = crypto.getRandomValues(new Uint8Array(32));
+    const c = await navigator.credentials.create({ publicKey: { rp: { name: "Life" }, user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "Jeff · Life vault", displayName: "Life vault" }, challenge: crypto.getRandomValues(new Uint8Array(32)), pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }], authenticatorSelection: { authenticatorAttachment: "platform", residentKey: "preferred", userVerification: "required" }, timeout: 60000, extensions: { prf: { eval: { first: salt } } } } });
+    const cred = b64e(new Uint8Array(c.rawId));
+    let prf = c.getClientExtensionResults()?.prf?.results?.first;
+    prf = prf ? new Uint8Array(prf) : await fidPrf(cred, b64e(salt));
+    const wk = await fidWrapKey(prf), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wk, PW._raw));
+    localStorage.setItem(FID_KEY, JSON.stringify({ cred, salt: b64e(salt), iv: b64e(iv), wrap: b64e(ct), salt0: PW.meta.salt }));
+    toast("Face ID unlock is on");
+  }
+  async function fidUnlock() {
+    const f = fidSaved(); if (!f) return;
+    PW.err = ""; PW.busy = true; render();
+    try {
+      const prf = await fidPrf(f.cred, f.salt), wk = await fidWrapKey(prf);
+      const raw = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(f.iv) }, wk, b64d(f.wrap)));
+      PW.meta = await api("pw");
+      if (PW.meta.salt !== f.salt0) { localStorage.removeItem(FID_KEY); throw new Error("Your master password changed — use it once, then turn Face ID back on."); }
+      const key = await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+      PW.vault = await pwDecrypt(key, PW.meta.data); PW.key = key; PW._raw = raw;
+      await pwAfterUnlock();
+    } catch (e) { PW.key = null; PW.err = /NotAllowed|cancel/i.test(e.name + e.message) ? "" : e.message; }
+    PW.busy = false; render();
+  }
+  async function pwAfterUnlock() {
+    const nn = await pwNames(); if (nn) setTimeout(() => toast(`Renamed ${nn} login${nn === 1 ? "" : "s"}`), 2600);
+    const n = await pwAutoCats(nn > 0); if (n) setTimeout(() => toast(`Sorted ${n} login${n === 1 ? "" : "s"} into categories`), 300);
+    pwTouch();
   }
   async function pwEncrypt(key, obj) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -989,7 +1036,7 @@
     const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return b64e(out);
   }
   async function pwDecrypt(key, data) { const raw = b64d(data); return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: raw.slice(0, 12) }, key, raw.slice(12)))); }
-  function pwLock() { try { Object.values(DOCST.urls).forEach((u) => URL.revokeObjectURL(u)); DOCST.urls = {}; } catch (_) {} PW.key = null; PW.vault = null; PW.reveal = {}; clearTimeout(PW.timer); closeSheet(); if (["keys", "docs"].includes(route())) render(); }
+  function pwLock() { PW._raw = null; try { Object.values(DOCST.urls).forEach((u) => URL.revokeObjectURL(u)); DOCST.urls = {}; } catch (_) {} PW.key = null; PW.vault = null; PW.reveal = {}; clearTimeout(PW.timer); closeSheet(); if (["keys", "docs"].includes(route())) render(); }
   const pwTouch = () => { clearTimeout(PW.timer); if (PW.key) PW.timer = setTimeout(pwLock, 5 * 60e3); };
   let pwHidden = 0;
   document.addEventListener("visibilitychange", () => { if (document.hidden) pwHidden = Date.now(); else if (PW.key && Date.now() - pwHidden > 60e3) pwLock(); });
@@ -1020,6 +1067,7 @@
       return head + `<div class="lux pw-lockcard" style="--i:0"><div class="pw-lockic">${svg("lock")}</div>
         <div class="hero-num" style="font-size:26px;text-align:center">${first ? "Create your master password" : "Locked"}</div>
         <div class="sub" style="text-align:center;margin:6px 0 16px">${first ? "Everything is encrypted on this phone with it. Nobody can reset it, not even me, so pick something you won't forget." : "Enter your master password."}</div>
+        ${!first && fidSaved() ? `<button class="btn fid-btn" data-act="fid-unlock" ${PW.busy ? "disabled" : ""}>${svg("face")} Unlock with Face ID</button><div class="fid-or">or use your master password</div>` : ""}
         <form data-form="${first ? "pw-create" : "pw-unlock"}"><input name="m" type="password" autocomplete="off" placeholder="Master password" required minlength="${first ? 6 : 1}">
         ${first ? `<input name="m2" type="password" autocomplete="off" placeholder="Type it again" required style="margin-top:8px">` : ""}
         <div class="err">${esc(PW.err)}</div><button class="btn" style="width:100%;margin-top:10px" ${PW.busy ? "disabled" : ""}>${PW.busy ? "Working…" : first ? "Create vault" : "Unlock"}</button></form></div>`;
@@ -1038,7 +1086,7 @@
       : groups.map(([c, l]) => `<h3 class="pw-h">${esc(c)} <span>${l.length}</span></h3><div class="list">${l.map(rowH).join("")}</div>`).join("");
     return head + `<input class="pw-search" type="search" placeholder="Search name, username, site…" value="${esc(PW.q)}" data-pwsearch autocomplete="off" autocapitalize="off">${chips}${body}
       <label class="btn ghost" style="display:block;text-align:center;margin-top:16px;text-transform:none;letter-spacing:0;font-size:15px">Import from Chrome or Apple (CSV)<input type="file" accept=".csv,text/csv,text/comma-separated-values" data-pwimport hidden></label>
-      <div class="sub" style="text-align:center;margin-top:14px">Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
+      <div class="sub" style="text-align:center;margin-top:14px">${fidSupported() ? `<button class="icon" data-act="${fidSaved() ? "fid-off" : "fid-on"}" style="font-size:14px;color:var(--gold2)">${fidSaved() ? "Turn off Face ID unlock" : "Turn on Face ID unlock"}</button> · ` : ""}Locks after 5 minutes idle · <button class="icon" data-act="pw-change" style="font-size:14px;color:var(--gold2)">Change master password</button></div>`;
   }
   const pwItem = (id) => PW.vault.items.find((x) => x.id === id);
   function pwOpen(x) {
@@ -1082,8 +1130,8 @@
           const key = await pwDerive(v.m, b64d(PW.meta.salt), PW.meta.iter);
           try { PW.vault = await pwDecrypt(key, PW.meta.data); } catch (_) { throw new Error("Wrong master password"); }
           PW.key = key;
-          const nn = await pwNames(); if (nn) setTimeout(() => toast(`Renamed ${nn} login${nn === 1 ? "" : "s"}`), 2600);
-          const n = await pwAutoCats(nn > 0); if (n) setTimeout(() => toast(`Sorted ${n} login${n === 1 ? "" : "s"} into categories`), 300);
+          await pwAfterUnlock();
+          if (fidSupported() && !fidSaved() && !store.get("life.fid.asked")) { store.set("life.fid.asked", "1"); setTimeout(() => sheet(`<h2>Unlock with Face ID?</h2><div class="sub" style="font-size:15px;margin-bottom:6px">Next time, open Passwords and Documents with Face ID instead of typing your master password. Your master password still works.</div><div class="actions"><span class="sp"></span><button class="btn ghost" data-act="close">Not now</button><button class="btn" data-act="fid-on">Turn on Face ID</button></div>`), 400); }
         }
         pwTouch();
       } catch (e) { PW.key = null; PW.err = e.message; }
@@ -1100,7 +1148,8 @@
       if (v.m !== v.m2) throw new Error("Those don’t match");
       const salt = crypto.getRandomValues(new Uint8Array(16));
       PW.key = await pwDerive(v.m, salt, PW_ITER); PW.meta = { ...PW.meta, salt: b64e(salt), iter: PW_ITER };
-      await pwPersist(); closeSheet(); toast("Master password changed");
+      await pwPersist(); closeSheet();
+      if (fidSaved()) { localStorage.removeItem(FID_KEY); toast("Master password changed — turn Face ID back on at the bottom of Passwords"); } else toast("Master password changed");
     }
   }
 
@@ -1660,6 +1709,9 @@
         case "ev-del": if (confirmDel()) { await remove("events", id); closeSheet(); toast("Deleted"); } break;
         case "close-more": closeSheet(); break;
         case "pw-lock": pwLock(); break;
+        case "fid-unlock": await fidUnlock(); break;
+        case "fid-on": closeSheet(); try { await fidEnable(); } catch (x) { if (!/NotAllowed|cancel/i.test(x.name + x.message)) toast(x.message || "Face ID didn’t turn on"); } render(); break;
+        case "fid-off": localStorage.removeItem(FID_KEY); toast("Face ID unlock is off"); render(); break;
         case "doc-new": docForm(); break;
         case "doc-open": docOpen(id); break;
         case "doc-edit": docForm(docList().find((x) => x.id === id)); break;
