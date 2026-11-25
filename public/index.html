@@ -525,6 +525,17 @@ form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:n
 .ask-mic svg{width:19px;height:19px;stroke:var(--gold2)}
 
 /* Meineke Tasks */
+.wk-newsec{border-style:dashed!important}
+.wk-bell{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid rgba(212,175,55,.25);background:none;display:grid;place-items:center;cursor:pointer}
+.wk-bell svg{width:19px;height:19px;stroke:#6f6756}
+.wk-bell.on{border-color:rgba(212,175,55,.7);background:rgba(212,175,55,.12)}.wk-bell.on svg{stroke:var(--gold2)}
+.wk-sw{display:flex;align-items:center;gap:12px;margin:16px 0 8px;text-transform:none;letter-spacing:0;font-size:16px;color:#f6efdc;cursor:pointer}
+.wk-sw input{position:absolute;opacity:0;pointer-events:none}
+.wk-swt{width:50px;height:30px;border-radius:15px;background:#2a2620;position:relative;transition:.2s;flex:none;border:1px solid rgba(212,175,55,.3)}
+.wk-swt::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#cfc6b0;transition:.2s}
+.wk-sw input:checked+.wk-swt{background:var(--goldg)}.wk-sw input:checked+.wk-swt::after{left:22px;background:#1a1306}
+.wk-sw b{font-weight:600}
+.wk-rem[hidden]{display:none}
 .wk-add .wk-opts{display:flex;gap:8px;margin-top:10px;align-items:center}
 .wk-add .wk-opts select,.wk-add .wk-opts input[type=date]{flex:1;min-width:0;margin:0;font-size:14px;padding:9px 10px;min-height:40px;-webkit-appearance:none;appearance:none}
 .wk-flag{flex:none;margin:0;text-transform:none;letter-spacing:0}.wk-flag input{position:absolute;opacity:0;pointer-events:none}
@@ -555,6 +566,6 @@ form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:n
     setTimeout(function () { var a = document.getElementById("app"); if (a && !a.children.length && !document.getElementById("boot-err")) show("Nothing rendered after 8 seconds."); }, 8000);
   })();
 </script>
-<script src="/app.js?v=52"></script>
+<script src="/app.js?v=53"></script>
 </body>
 </html>

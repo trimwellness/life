@@ -6,7 +6,7 @@
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} },
   };
   let token = store.get("life.token");
-  let D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {} };
+  let D = { todo: [], wish: [], pkgs: [], events: [], work: [], wsec: [], status: {} };
   let trim = null, money = null;
   const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false, inTab: "personal" };
 
@@ -60,7 +60,7 @@
   // ---------- Data ----------
   async function boot() {
     if (!token) return renderLogin();
-    try { D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    try { D = { todo: [], wish: [], pkgs: [], events: [], work: [], wsec: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
     loadTrim(); loadMoney(); loadGV(); loadAlbums(); pwLoad();
   }
@@ -106,6 +106,8 @@
     speaker: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
     mute: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
     wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    belloff: '<path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l1.5 2H8"/><path d="M10 20.5a2 2 0 0 0 4 0M4 4l16 16"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -320,7 +322,7 @@
     const now = new Date(), hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const tl = [];
     for (const e of evOn(today)) if (!(e.done || []).includes(today)) tl.push({ t: e.time || "00:00", when: clk(e.time), what: e.title, c: (KIND[e.kind] || KIND.other)[1], href: "cal", past: e.time && (e.end || e.time) < hm });
-    (D.work || []).filter((t) => !t.done && t.due && t.due <= today).forEach((t) => tl.push({ t: t.due < today ? "99:96" : t.time || "99:97", when: t.due < today ? "Overdue" : t.time ? clk(t.time) : "Today", what: (t.store ? storeName(t.store) + " · " : "") + t.text, c: t.due < today ? "#ff9585" : "#e2c060", href: "work" }));
+    (D.work || []).filter((t) => !t.done && t.due && t.due <= today).forEach((t) => tl.push({ t: t.due < today ? "99:96" : t.time || "99:97", when: t.due < today ? "Overdue" : t.time ? clk(t.time) : "Today", what: t.text, c: t.due < today ? "#ff9585" : "#e2c060", href: "work" }));
     open.filter((t) => t.due && t.due <= today).slice(0, 3).forEach((t) => tl.push({ t: "99:98", when: t.due < today ? "Overdue" : "Today", what: t.text, c: t.due < today ? "#ff9585" : "#d4af37", href: "todo" }));
     active.filter((p) => p.statusCode === 4 || (p.eta && p.eta.slice(0, 10) === today)).forEach((p) => tl.push({ t: "99:99", when: "Arriving", what: p.label || "Package", c: "#8fb8ff", href: "pkgs" }));
     tl.sort((x, y) => x.t.localeCompare(y.t));
@@ -422,9 +424,9 @@
   }
 
   // ---------- Meineke Tasks (work) ----------
-  const WK = { store: "", showDone: false };
-  const STORES = () => [...new Set(["2871", "2935", "3047", "District", ...(D.work || []).map((t) => t.store).filter(Boolean)])];
-  const storeName = (s) => (/^\d+$/.test(s) ? "#" + s : s);
+  const WK = { sec: "", showDone: false };
+  const wSecs = () => (D.wsec || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  const WREMS = [[0, "At due time"], [15, "15 min"], [30, "30 min"], [60, "1 hour"], [120, "2 hours"], [1440, "1 day"], [2880, "2 days"], [10080, "1 week"]];
   function wkWhen(t) {
     const today = todayKey();
     if (!t.due) return "";
@@ -432,32 +434,56 @@
     return `${lbl}${t.time ? " · " + clk(t.time) : ""}`;
   }
   function pWork() {
-    const today = todayKey(), wkEnd = dAdd(today, 7), all = D.work || [];
-    const open = all.filter((t) => !t.done && (!WK.store || t.store === WK.store)).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (a.priority === "high" ? -1 : 1));
-    const done = all.filter((t) => t.done && (!WK.store || t.store === WK.store)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-    const groups = [["Overdue", (t) => t.due && t.due < today], ["Today", (t) => t.due === today], ["This week", (t) => t.due > today && t.due <= wkEnd], ["Later", (t) => t.due > wkEnd], ["No date", (t) => !t.due]];
+    const today = todayKey(), all = D.work || [], secs = wSecs();
+    const inSec = (t) => !WK.sec || (WK.sec === "_none" ? !t.section || !secs.some((x) => x.name === t.section) : t.section === WK.sec);
+    const sortT = (a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (a.time || "").localeCompare(b.time || "") || (a.priority === "high" ? -1 : b.priority === "high" ? 1 : 0);
+    const open = all.filter((t) => !t.done && inSec(t)).sort(sortT);
+    const done = all.filter((t) => t.done && inSec(t)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const row = (t) => `<div class="item wk ${t.done ? "done" : ""} ${t.priority === "high" ? "hi" : ""}">
       <button class="chk ${t.done ? "on" : ""}" data-act="wk-toggle" data-id="${t.id}">${t.done ? "✓" : ""}</button>
       <div class="grow" data-act="wk-edit" data-id="${t.id}" style="cursor:pointer"><div class="t">${t.priority === "high" ? '<span class="wk-hi">!</span>' : ""}${esc(t.text)}</div>
-      <div class="sub">${[t.store ? `<span class="wk-store">${esc(storeName(t.store))}</span>` : "", t.due ? `<span style="color:${!t.done && t.due < today ? "var(--bad)" : !t.done && t.due === today ? "var(--warn)" : ""}">${wkWhen(t)}</span>` : "", t.notes ? esc(t.notes.slice(0, 60)) : ""].filter(Boolean).join(" · ")}</div></div></div>`;
-    const counts = {}; all.filter((t) => !t.done).forEach((t) => t.store && (counts[t.store] = (counts[t.store] || 0) + 1));
-    const chips = `<div class="pv-chips"><button class="${!WK.store ? "on" : ""}" data-act="wk-store" data-id="">All ${all.filter((t) => !t.done).length}</button>${STORES().map((s) => `<button class="${WK.store === s ? "on" : ""}" data-act="wk-store" data-id="${esc(s)}">${esc(storeName(s))}${counts[s] ? " " + counts[s] : ""}</button>`).join("")}</div>`;
+      ${t.due || t.notes ? `<div class="sub">${[t.due ? `<span style="color:${!t.done && t.due < today ? "var(--bad)" : !t.done && t.due === today ? "var(--warn)" : ""}">${wkWhen(t)}</span>` : "", t.notes ? esc(t.notes.slice(0, 60)) : ""].filter(Boolean).join(" · ")}</div>` : ""}</div>
+      ${!t.done ? `<button class="wk-bell ${t.remind && t.due ? "on" : ""}" data-act="wk-bell" data-id="${t.id}" aria-label="Reminder">${svg(t.remind && t.due ? "bell" : "belloff")}</button>` : ""}</div>`;
+    const cnt = (f) => all.filter((t) => !t.done && f(t)).length;
+    const unfiled = cnt((t) => !t.section || !secs.some((x) => x.name === t.section));
+    const chips = `<div class="pv-chips"><button class="${!WK.sec ? "on" : ""}" data-act="wk-sec" data-id="">All ${cnt(() => true)}</button>${secs.map((x) => `<button class="${WK.sec === x.name ? "on" : ""}" data-act="wk-sec" data-id="${esc(x.name)}">${esc(x.name)} ${cnt((t) => t.section === x.name) || ""}</button>`).join("")}<button class="wk-newsec" data-act="wk-secs">${secs.length ? "Edit" : "+ Section"}</button></div>`;
     const add = `<form class="card wk-add" data-form="wk-add"><div class="row"><input name="text" placeholder="Add a Meineke task…" class="grow" required autocomplete="off"><button class="btn">Add</button></div>
-      <div class="wk-opts"><select name="store"><option value="">Store…</option>${STORES().map((s) => `<option value="${esc(s)}" ${WK.store === s ? "selected" : ""}>${esc(storeName(s))}</option>`).join("")}</select>
+      <div class="wk-opts">${secs.length ? `<select name="section"><option value="">No section</option>${secs.map((x) => `<option ${WK.sec === x.name ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
       <input name="due" type="date"><label class="wk-flag"><input type="checkbox" name="hi"><span>! High</span></label></div></form>`;
-    const body = open.length ? groups.map(([g, f]) => { const l = open.filter(f); return l.length ? `<h3 class="pw-h">${g} <span>${l.length}</span></h3><div class="list">${l.map(row).join("")}</div>` : ""; }).join("") : `<div class="empty">Nothing open${WK.store ? " for " + esc(storeName(WK.store)) : ""}. Nice.</div>`;
-    return top("Meineke Tasks") + add + chips + body
-      + (done.length ? `<h3><button class="icon" data-act="wk-showdone" style="font-size:13px;color:var(--mute)">${WK.showDone ? "▾" : "▸"} Done (${done.length})</button></h3>${WK.showDone ? `<div class="list">${done.slice(0, 50).map(row).join("")}</div>` : ""}` : "");
+    // Group by section when showing All; otherwise one list sorted by due date.
+    let body;
+    if (!open.length) body = `<div class="empty">Nothing open${WK.sec && WK.sec !== "_none" ? " in " + esc(WK.sec) : ""}.</div>`;
+    else if (WK.sec || !secs.length) body = `<div class="list">${open.map(row).join("")}</div>`;
+    else body = [...secs.map((x) => [x.name, open.filter((t) => t.section === x.name)]), ["Other", open.filter((t) => !t.section || !secs.some((x) => x.name === t.section))]].filter(([, l]) => l.length).map(([n, l]) => `<h3 class="pw-h">${esc(n)} <span>${l.length}</span></h3><div class="list">${l.map(row).join("")}</div>`).join("");
+    const perm = typeof Notification !== "undefined" ? Notification.permission : "default";
+    const alerts = perm === "granted" ? "" : `<div class="card" style="margin-bottom:12px"><div class="row"><div class="grow"><div style="font-weight:600">Push notifications</div><div class="sub">Turn on to get task reminders on this phone.</div></div><button class="btn sm" data-act="push-on">Turn on</button></div></div>`;
+    return top("Meineke Tasks") + alerts + add + chips + body
+      + (done.length ? `<h3><button class="icon" data-act="wk-showdone" style="font-size:13px;color:var(--mute)">${WK.showDone ? "▾" : "▸"} Done (${done.length})</button></h3>${WK.showDone ? `<div class="list">${done.slice(0, 50).map(row).join("")}</div>` : ""}` : "")
+      + (unfiled && secs.length && !WK.sec ? "" : "");
   }
   function wkForm(t = {}) {
+    const secs = wSecs(), rems = t.rems && t.rems.length ? t.rems : [0];
     sheet(`<h2>${t.id ? "Edit" : "New"} Meineke task</h2><form data-form="wk-save" data-id="${t.id || ""}">
       <label>Task</label><input name="text" value="${esc(t.text || "")}" required>
-      <label>Store</label><input name="store" list="wk-stores" value="${esc(t.store || "")}" placeholder="2871, 2935, 3047, District…"><datalist id="wk-stores">${STORES().map((s) => `<option value="${esc(s)}">`).join("")}</datalist>
-      <div class="cal-2"><div><label>Due</label><input type="date" name="due" value="${esc(t.due || "")}"></div><div><label>Time (optional)</label><input type="time" name="time" value="${esc(t.time || "")}"></div></div>
+      <label>Section</label><select name="section"><option value="">No section</option>${secs.map((x) => `<option ${t.section === x.name ? "selected" : ""}>${esc(x.name)}</option>`).join("")}<option value="__new">+ New section…</option></select>
+      <div class="cal-2"><div><label>Due</label><input type="date" name="due" value="${esc(t.due || "")}"></div><div><label>Time</label><input type="time" name="time" value="${esc(t.time || "")}"></div></div>
       <label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="high" ${t.priority === "high" ? "selected" : ""}>High</option></select>
-      <label class="doc-chk"><input type="checkbox" name="remind" ${t.remind === false ? "" : "checked"}> Push reminder on the due date (8 AM, or at the time you set)</label>
+      <label class="wk-sw"><input type="checkbox" name="remind" ${t.remind ? "checked" : ""}><span class="wk-swt"></span><b>Remind me</b></label>
+      <div class="wk-rem" ${t.remind ? "" : "hidden"}><div class="cal-rems">${WREMS.map(([v, n]) => `<label class="cal-rem"><input type="checkbox" name="rem" value="${v}" ${rems.includes(v) ? "checked" : ""}><span>${n}</span></label>`).join("")}</div>
+        <div class="sub">Reminders go out before the due time (9 AM if no time is set). A due date is needed.</div></div>
       <label>Notes</label><textarea name="notes">${esc(t.notes || "")}</textarea>
       <div class="actions">${t.id ? `<button type="button" class="btn danger" data-act="wk-del" data-id="${t.id}">Delete</button>` : ""}<span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
+    const F = document.querySelector('form[data-form="wk-save"]');
+    F.remind.addEventListener("change", () => { F.querySelector(".wk-rem").hidden = !F.remind.checked; if (F.remind.checked && !F.due.value) F.due.value = todayKey(); });
+    F.section.addEventListener("change", async () => { if (F.section.value !== "__new") return; const n = (prompt("New section name") || "").trim(); if (!n) { F.section.value = t.section || ""; return; } await save("wsec", { name: n, order: Date.now() }); F.section.insertAdjacentHTML("afterbegin", ""); const o = document.createElement("option"); o.textContent = n; F.section.insertBefore(o, F.section.lastElementChild); F.section.value = n; });
+  }
+  function wkSecsSheet() {
+    const secs = wSecs();
+    sheet(`<h2>Sections</h2><div class="sub" style="margin-bottom:10px">Make your own groups — by store, project, person, whatever works.</div>
+      <div class="list">${secs.map((x, i) => `<div class="item"><div class="grow t">${esc(x.name)}</div>
+        <button class="btn ghost sm" data-act="wsec-up" data-id="${x.id}" ${i ? "" : "disabled"}>↑</button><button class="btn ghost sm" data-act="wsec-ren" data-id="${x.id}">Rename</button><button class="btn ghost sm" data-act="wsec-del" data-id="${x.id}" style="color:var(--bad)">Delete</button></div>`).join("") || `<div class="empty" style="padding:14px">No sections yet.</div>`}</div>
+      <form data-form="wsec-add" style="margin-top:12px"><div class="row"><input name="name" placeholder="New section name" class="grow" required><button class="btn">Add</button></div></form>
+      <div class="actions"><span class="sp"></span><button class="btn ghost" data-act="close">Done</button></div>`);
   }
 
   // ---------- Wish list ----------
@@ -1539,7 +1565,7 @@
       const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
       if (opt.voice) speak(r.reply);
-      if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {}, ...(await api("all")) }; render(); }
+      if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], work: [], wsec: [], status: {}, ...(await api("all")) }; render(); }
     } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
     chat.busy = false;
     if (document.getElementById("gmodal")) { openGerald(); document.querySelector("#gmodal input[name=q]")?.focus(); }
@@ -1613,11 +1639,16 @@
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
         case "more": e.preventDefault(); moreSheet(); break;
-        case "wk-store": WK.store = id; render(); break;
+        case "wk-sec": WK.sec = WK.sec === id ? "" : id; render(); break;
+        case "wk-secs": wkSecsSheet(); break;
         case "wk-showdone": WK.showDone = !WK.showDone; render(); break;
         case "wk-toggle": { const t = D.work.find((x) => x.id === id); await save("work", { ...t, done: !t.done }); break; }
         case "wk-edit": wkForm(D.work.find((x) => x.id === id)); break;
+        case "wk-bell": { const t = D.work.find((x) => x.id === id); if (!t.due || !t.remind) { wkForm({ ...t, remind: true, due: t.due || todayKey() }); break; } await save("work", { ...t, remind: false }); toast("Reminder off"); break; }
         case "wk-del": if (confirmDel()) { await remove("work", id); closeSheet(); } break;
+        case "wsec-ren": { const x = D.wsec.find((y) => y.id === id), n = (prompt("Rename section", x.name) || "").trim(); if (!n || n === x.name) break; for (const t of D.work.filter((t) => t.section === x.name)) await save("work", { ...t, section: n }); await save("wsec", { ...x, name: n }); if (WK.sec === x.name) WK.sec = n; wkSecsSheet(); break; }
+        case "wsec-del": { const x = D.wsec.find((y) => y.id === id); if (!confirm(`Delete “${x.name}”? Its tasks stay, just without a section.`)) break; for (const t of D.work.filter((t) => t.section === x.name)) await save("work", { ...t, section: "" }); await remove("wsec", id); if (WK.sec === x.name) WK.sec = ""; wkSecsSheet(); break; }
+        case "wsec-up": { const l = wSecs(), i = l.findIndex((y) => y.id === id); if (i > 0) { const a2 = l[i - 1], b2 = l[i]; const oa = a2.order, ob = b2.order === oa ? oa + 1 : b2.order; await save("wsec", { ...a2, order: ob }); await save("wsec", { ...b2, order: oa }); } wkSecsSheet(); break; }
         case "tl": e.preventDefault(); location.hash = id; break;
         case "cal-day": CAL.sel = id; CAL.month = id.slice(0, 7); render(); break;
         case "cal-mo": { const [yy, mm] = CAL.month.split("-").map(Number), t2 = new Date(yy, mm - 1 + +id, 1); CAL.month = dkey(t2).slice(0, 7); render(); break; }
@@ -1694,8 +1725,10 @@
           PV.albums = null; closeSheet(); render(); break;
         }
         case "todo-add": await save("todo", { text: v.text, due: v.due }); break;
-        case "wk-add": await save("work", { text: v.text, store: v.store || WK.store, due: v.due, priority: v.hi ? "high" : "normal", remind: true }); break;
-        case "wk-save": { const t = f.dataset.id ? D.work.find((x) => x.id === f.dataset.id) : {}; await save("work", { ...t, text: v.text, store: v.store.trim(), due: v.due, time: v.time, priority: v.priority, remind: !!v.remind, notes: v.notes }); closeSheet(); break; }
+        case "wk-add": await save("work", { text: v.text, section: v.section || (WK.sec && WK.sec !== "_none" ? WK.sec : ""), due: v.due, priority: v.hi ? "high" : "normal", remind: false, rems: [0] }); break;
+        case "wk-save": { const fd = new FormData(f), t = f.dataset.id ? D.work.find((x) => x.id === f.dataset.id) : {}; const remind = !!v.remind && !!v.due; await save("work", { ...t, text: v.text, section: v.section === "__new" ? "" : v.section, due: v.due, time: v.time, priority: v.priority, remind, rems: fd.getAll("rem").map(Number).length ? fd.getAll("rem").map(Number) : [0], notes: v.notes }); closeSheet();
+          if (remind && typeof Notification !== "undefined" && Notification.permission !== "granted") toast("Turn on push notifications at the top of Meineke Tasks"); else if (remind) toast("Reminder set"); break; }
+        case "wsec-add": await save("wsec", { name: v.name.trim(), order: Date.now() }); wkSecsSheet(); break;
         case "todo-save": { const t = D.todo.find((x) => x.id === id); await save("todo", { ...t, text: v.text, due: v.due, notes: v.notes }); closeSheet(); break; }
         case "wish-save": { const w = D.wish.find((x) => x.id === id) || {}; await save("wish", { ...w, id, ...v }); closeSheet(); break; }
         case "pkg-add": await save("pkgs", { tracking: v.tracking, label: v.label, from: v.from }); toast("Tracking"); break;

@@ -13,7 +13,8 @@ const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 // What each collection keeps; anything else sent is dropped.
 const CLEAN = {
   events: (b, old = {}) => cleanEvent(b, old),
-  work: (b, old = {}) => ({ text: clip(b.text, 300), store: clip(b.store, 40), due: /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : "", time: /^([01]\d|2[0-3]):[0-5]\d$/.test(b.time || "") ? b.time : "", priority: b.priority === "high" ? "high" : "normal", remind: b.remind !== false, notes: clip(b.notes, 1500), done: !!b.done, doneAt: b.done ? old.doneAt || Date.now() : null, createdAt: old.createdAt || Date.now() }),
+  work: (b, old = {}) => ({ text: clip(b.text, 300), section: clip(b.section, 40), due: /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : "", time: /^([01]\d|2[0-3]):[0-5]\d$/.test(b.time || "") ? b.time : "", priority: b.priority === "high" ? "high" : "normal", remind: !!b.remind, rems: Array.isArray(b.rems) ? [...new Set(b.rems.map(Number).filter((x) => [0, 15, 30, 60, 120, 1440, 2880, 10080].includes(x)))] : [0], notes: clip(b.notes, 1500), done: !!b.done, doneAt: b.done ? old.doneAt || Date.now() : null, createdAt: old.createdAt || Date.now() }),
+  wsec: (b, old = {}) => ({ name: clip(b.name, 40) || "Section", order: Number.isFinite(+b.order) ? +b.order : old.order || Date.now() }),
   todo: (b, old = {}) => ({ text: clip(b.text, 300), due: /^\d{4}-\d{2}-\d{2}$/.test(b.due) ? b.due : "", done: !!b.done, doneAt: b.done ? old.doneAt || Date.now() : null, notes: clip(b.notes, 1000) }),
   wish: (b, old = {}) => ({ name: clip(b.name, 200), url: /^https?:\/\//i.test(b.url || "") ? clip(b.url, 1000) : "", price: num(b.price), priority: ["high", "med", "low"].includes(b.priority) ? b.priority : "med", notes: clip(b.notes, 1000), got: !!b.got, gotAt: b.got ? old.gotAt || Date.now() : null }),
   pkgs: (b, old = {}) => {

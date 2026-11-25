@@ -2,7 +2,7 @@
 import { getStore } from "@netlify/blobs";
 
 export const store = () => getStore({ name: "life", consistency: "strong" });
-export const COLS = ["todo", "wish", "pkgs", "events", "work"];
+export const COLS = ["todo", "wish", "pkgs", "events", "work", "wsec"];
 export const env = (k) => (Netlify.env.get(k) || "").trim();
 
 export const json = (body, status = 200) =>

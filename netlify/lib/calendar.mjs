@@ -89,16 +89,17 @@ export async function runReminders(s, now = Date.now()) {
       }
     }
   }
-  // Meineke Tasks: a push on the due date (at its time, or 8 AM), plus 8 AM the day after if still open.
+  // Meineke Tasks with reminders turned on: push at the chosen offsets before the due time (9 AM if no time).
   const { blobs: wb } = await s.list({ prefix: "work/" });
   for (const b of wb) {
     const t = await s.get(b.key, { type: "json" });
-    if (!t || t.done || !t.due || t.remind === false) continue;
-    const id = b.key.slice(5);
-    for (const [d, tm, late] of [[t.due, t.time || "08:00", false], [addDays(t.due, 1), "08:00", true]]) {
-      const fire = localToUtc(d, tm), key = `work|${id}|${d}`;
+    if (!t || t.done || !t.due || !t.remind) continue;
+    const id = b.key.slice(5), at = localToUtc(t.due, t.time || "09:00");
+    for (const off of t.rems && t.rems.length ? t.rems : [0]) {
+      const fire = at - off * 60000, key = `work|${id}|${t.due}|${t.time}|${off}`;
       if (fire > now || fire < now - 20 * 60000 || sent[key]) continue;
-      await sendPush(s, { title: late ? "Meineke Task Overdue" : "Meineke Task Due", body: [t.text, t.store ? (/^\d+$/.test(t.store) ? "#" + t.store : t.store) : "", !late && t.time ? clock(t.time) : ""].filter(Boolean).join(" · "), tag: key, url: "/#work" });
+      const when = off === 0 ? (t.time ? `Due now · ${clock(t.time)}` : "Due today") : off === 1440 ? `Due tomorrow${t.time ? " at " + clock(t.time) : ""}` : off >= 2880 ? `Due ${dayWord(t.due, now)}${t.time ? " at " + clock(t.time) : ""}` : `Due in ${off >= 60 ? off / 60 + (off === 60 ? " hour" : " hours") : off + " minutes"} · ${clock(t.time || "09:00")}`;
+      await sendPush(s, { title: t.text, body: [`Meineke${t.section ? " · " + t.section : ""}`, when].join(" · "), tag: key, url: "/#work" });
       sent[key] = now; n++;
     }
   }
