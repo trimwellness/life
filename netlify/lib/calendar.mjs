@@ -89,6 +89,19 @@ export async function runReminders(s, now = Date.now()) {
       }
     }
   }
+  // Meineke Tasks: a push on the due date (at its time, or 8 AM), plus 8 AM the day after if still open.
+  const { blobs: wb } = await s.list({ prefix: "work/" });
+  for (const b of wb) {
+    const t = await s.get(b.key, { type: "json" });
+    if (!t || t.done || !t.due || t.remind === false) continue;
+    const id = b.key.slice(5);
+    for (const [d, tm, late] of [[t.due, t.time || "08:00", false], [addDays(t.due, 1), "08:00", true]]) {
+      const fire = localToUtc(d, tm), key = `work|${id}|${d}`;
+      if (fire > now || fire < now - 20 * 60000 || sent[key]) continue;
+      await sendPush(s, { title: late ? "Meineke Task Overdue" : "Meineke Task Due", body: [t.text, t.store ? (/^\d+$/.test(t.store) ? "#" + t.store : t.store) : "", !late && t.time ? clock(t.time) : ""].filter(Boolean).join(" · "), tag: key, url: "/#work" });
+      sent[key] = now; n++;
+    }
+  }
   for (const k of Object.keys(sent)) if (sent[k] < now - 3 * 864e5) delete sent[k];
   if (n) await s.setJSON("meta/rem-sent", sent);
   return { checked: evs.length, sent: n };

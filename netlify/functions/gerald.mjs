@@ -13,8 +13,14 @@ const $ = (n) => "$" + (+n || 0).toLocaleString("en-US", { minimumFractionDigits
 const nowNY = () => new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
 const todayNY = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
-function factSheet({ todo, wish, pkgs, trim, money, gv, pw, events }) {
+function factSheet({ todo, wish, pkgs, trim, money, gv, pw, events, work = [] }) {
   const out = [];
+  const wopen = work.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+  out.push(`## Meineke Tasks — Jeff's work tasks as District Manager (${wopen.length} open)`);
+  wopen.forEach((t) => out.push(`- [work ${t.id}] ${t.text}${t.store ? ` [store ${t.store}]` : ""}${t.priority === "high" ? " [HIGH]" : ""}${t.due ? ` (due ${t.due}${t.time ? " " + t.time : ""})` : ""}${t.notes ? ` — ${t.notes}` : ""}`));
+  const wdone = work.filter((t) => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 8);
+  if (wdone.length) out.push(`Recently finished: ${wdone.map((t) => t.text).join("; ")}`);
+  out.push("");
   const open = todo.filter((t) => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
   out.push(`## To-do (${open.length} open)`);
   open.forEach((t) => out.push(`- [id ${t.id}] ${t.text}${t.due ? ` (due ${t.due})` : ""}${t.notes ? ` — ${t.notes}` : ""}`));
@@ -87,6 +93,8 @@ const TOOLS = [
   { name: "add_event", description: "Add an event or reminder to Jeff's calendar (Life sends push reminders). Times are Jeff's local Eastern time.", input_schema: { type: "object", properties: { title: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD (first occurrence)" }, time: { type: "string", description: "HH:MM 24-hour; omit for all-day" }, end: { type: "string", description: "HH:MM, optional" }, kind: { type: "string", enum: ["work", "med", "appt", "personal", "bill", "other"] }, repeat: { type: "string", enum: ["none", "daily", "weekdays", "days", "weekly", "biweekly", "monthly", "yearly"], description: "\"days\" = specific days of the week (set days)" }, days: { type: "array", items: { type: "number" }, description: "For repeat \"days\": 0=Sun … 6=Sat" }, until: { type: "string", description: "YYYY-MM-DD last day, optional" }, reminders: { type: "array", items: { type: "number", enum: [0, 5, 15, 30, 60, 120, 1440, 2880, 10080] }, description: "Minutes before to remind; 0 = at the time, 1440 = 24 hours before. Default [0, 1440]" }, location: { type: "string" }, notes: { type: "string" } }, required: ["title", "date"] } },
   { name: "delete_event", description: "Delete a calendar event by its id.", input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "add_todo", description: "Add an item to Jeff's to-do list.", input_schema: { type: "object", properties: { text: { type: "string" }, due: { type: "string", description: "YYYY-MM-DD, optional" }, notes: { type: "string" } }, required: ["text"] } },
+  { name: "add_work_task", description: "Add a Meineke (work) task for Jeff. Use this for anything about his stores, managers, techs, district or Emig Enterprises; use add_todo only for personal things.", input_schema: { type: "object", properties: { text: { type: "string" }, store: { type: "string", description: "Store number like 2871, 2935, 3047, or 'District'" }, due: { type: "string", description: "YYYY-MM-DD" }, time: { type: "string", description: "HH:MM 24-hour, optional" }, priority: { type: "string", enum: ["high", "normal"] }, notes: { type: "string" } }, required: ["text"] } },
+  { name: "complete_work_task", description: "Mark a Meineke task done by its id.", input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "complete_todo", description: "Mark a to-do done by its id.", input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "add_wish", description: "Add an item to Jeff's wish list.", input_schema: { type: "object", properties: { name: { type: "string" }, price: { type: "number" }, url: { type: "string" }, priority: { type: "string", enum: ["high", "med", "low"] }, notes: { type: "string" } }, required: ["name"] } },
   { name: "track_package", description: "Start tracking a personal package by tracking number.", input_schema: { type: "object", properties: { tracking: { type: "string" }, label: { type: "string", description: "What it is" }, from: { type: "string", description: "Store or sender" } }, required: ["tracking"] } },
@@ -107,6 +115,16 @@ async function runTool(s, name, a) {
     const id = newId();
     await s.setJSON("todo/" + id, { text: clip(a.text, 300), due: /^\d{4}-\d{2}-\d{2}$/.test(a.due || "") ? a.due : "", done: false, doneAt: null, notes: clip(a.notes, 1000) });
     return `Added to-do ${id}: ${a.text}${a.due ? " due " + a.due : ""}`;
+  }
+  if (name === "add_work_task") {
+    const id = newId(), D = /^\d{4}-\d{2}-\d{2}$/, T = /^([01]\d|2[0-3]):[0-5]\d$/;
+    await s.setJSON("work/" + id, { text: clip(a.text, 300), store: clip(a.store, 40), due: D.test(a.due || "") ? a.due : "", time: T.test(a.time || "") ? a.time : "", priority: a.priority === "high" ? "high" : "normal", remind: true, notes: clip(a.notes, 1500), done: false, doneAt: null, createdAt: Date.now() });
+    return `Added Meineke task ${id}: ${a.text}${a.store ? " (store " + a.store + ")" : ""}${a.due ? " due " + a.due : ""}`;
+  }
+  if (name === "complete_work_task") {
+    const k = "work/" + clip(a.id, 40), doc = await s.get(k, { type: "json" });
+    if (!doc) return "No Meineke task with that id.";
+    await s.setJSON(k, { ...doc, done: true, doneAt: Date.now() }); return `Marked done: ${doc.text}`;
   }
   if (name === "complete_todo") {
     const doc = await s.get("todo/" + clip(a.id, 40), { type: "json" });
@@ -147,11 +165,12 @@ export default async (req) => {
 
   const s = store();
   const gvRead = async () => { const o = {}; for (const c of ["firearms", "nfa", "mags", "spares", "gear"]) o[c] = await readPrefix(s, `gv/${c}/`); return o; };
-  const [todo, wish, pkgs, trim, money, gv, events] = await Promise.all([
+  const [todo, wish, pkgs, trim, money, gv, events, work] = await Promise.all([
     readPrefix(s, "todo/"), readPrefix(s, "wish/"), readPrefix(s, "pkgs/"),
     trimData().catch((e) => ({ ready: false, why: e.message })), moneyData(s, 400).catch((e) => ({ ready: false, why: e.message })),
     gvRead().catch(() => null),
     readPrefix(s, "events/").catch(() => []),
+    readPrefix(s, "work/").catch(() => []),
   ]);
 
   // Netlify's AI Gateway normally fills in ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL; pass them explicitly in case
@@ -162,7 +181,7 @@ export default async (req) => {
   let changed = false, reply = "", why = "";
   try {
     for (let step = 0; step < 4; step++) {
-      const r = await ai.messages.create({ model: MODEL, max_tokens: 8000, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events })), tools: TOOLS, messages });
+      const r = await ai.messages.create({ model: MODEL, max_tokens: 8000, system: SYSTEM(factSheet({ todo, wish, pkgs, trim, money, gv, pw, events, work })), tools: TOOLS, messages });
       const text = r.content.filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
       const uses = r.content.filter((c) => c.type === "tool_use");
       if (!text && !uses.length) { why = `stop=${r.stop_reason} blocks=${r.content.map((c) => c.type).join(",") || "none"}`; console.error("gerald empty", why, JSON.stringify(r.usage || {})); }

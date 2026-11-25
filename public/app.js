@@ -6,7 +6,7 @@
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} },
   };
   let token = store.get("life.token");
-  let D = { todo: [], wish: [], pkgs: [], events: [], status: {} };
+  let D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {} };
   let trim = null, money = null;
   const ui = { open: {}, todoShowDone: false, wishShowGot: false, pkgShowOld: false, inTab: "personal" };
 
@@ -60,7 +60,7 @@
   // ---------- Data ----------
   async function boot() {
     if (!token) return renderLogin();
-    try { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    try { D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {}, ...(await api("all")) }; } catch (e) { if (e.message !== "signin") $app.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     render();
     loadTrim(); loadMoney(); loadGV(); loadAlbums(); pwLoad();
   }
@@ -85,7 +85,7 @@
   const route = () => location.hash.replace(/^#/, "").split("?")[0];
   window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); if (route() === "trim" || route() === "pkgs") loadTrim(); });
   const TABS = [["", "Home", "home"], ["money", "Money", "wallet"], ["trim", "Trim", "chart"], ["guns", "Vault", "shield"], ["more", "More", "grid"]];
-  const MORE = ["todo", "pkgs", "wish", "photos", "keys", "cal", "docs"];
+  const MORE = ["todo", "pkgs", "wish", "photos", "keys", "cal", "docs", "work"];
   const ICON = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     wallet: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
@@ -105,6 +105,7 @@
     mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
     speaker: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
     mute: '<path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
     shield: '<path d="M12 3l8 3v6c0 4.6-3.4 8.2-8 9-4.6-.8-8-4.4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
     photo: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
@@ -112,7 +113,7 @@
   const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
   const top = (title, right = "") => {
     const isTab = TABS.some(([r]) => r === route());
-    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted", Calendar: "Schedule", Documents: "Encrypted" }[title] || "Life";
+    const eyebrow = { "To-Do": "Today’s list", "Wish List": "Wants", "Trim Sales": "Trim Wellness", Incoming: "Deliveries", Money: "Portfolio", "Photo Vault": "Memories", "Gun Vault": "Safe Ledger", Passwords: "Encrypted", Calendar: "Schedule", Documents: "Encrypted", "Meineke Tasks": "Work" }[title] || "Life";
     return `<div class="top">${isTab ? "" : `<button class="back" data-go="">‹ Home</button>`}<div style="flex:1"></div>${right}</div><h1 data-eyebrow="${eyebrow}">${title}</h1>`;
   };
 
@@ -139,7 +140,7 @@
     const t = (href, ic, name, sub) => `<a class="more-t" href="#${href}" data-act="close-more">${svg(ic)}<b>${name}</b><small>${sub}</small></a>`;
     const nx = upcoming(1)[0];
     sheet(`<div class="more-h">Everything</div><div class="more-g">
-      ${t("cal", "cal", "Calendar", nx ? esc(nx[1].title).slice(0, 18) : "Nothing soon")}${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
+      ${t("work", "wrench", "Meineke Tasks", `${(D.work || []).filter((x) => !x.done).length} open`)}${t("cal", "cal", "Calendar", nx ? esc(nx[1].title).slice(0, 18) : "Nothing soon")}${t("todo", "check", "To-Do", `${open} open`)}${t("pkgs", "box", "Incoming", `${inc} on the way`)}${t("wish", "gift", "Wish List", `${wishes} item${wishes === 1 ? "" : "s"}`)}
       ${t("photos", "photo", "Photo Vault", PV.albums ? `${PV.total || 0} photos` : "Albums")}${t("keys", "lock", "Passwords", PW.key ? `${PW.vault.items.length} logins` : "Locked")}${t("docs", "id", "Documents", PW.key ? `${(PW.vault.docs || []).length} saved` : "Locked")}
       </div>`);
     document.getElementById("modal")?.classList.add("more-modal");
@@ -148,7 +149,7 @@
   let lastRoute = null;
   function render() {
     const r = route();
-    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal, docs: pDocs }[r] || pHome;
+    const page = { todo: pTodo, wish: pWish, trim: pTrim, pkgs: pPkgs, money: pMoney, photos: pPhotos, guns: pGuns, keys: pKeys, cal: pCal, docs: pDocs, work: pWork }[r] || pHome;
     const fresh = r !== lastRoute;
     lastRoute = r;
     let html;
@@ -319,6 +320,7 @@
     const now = new Date(), hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const tl = [];
     for (const e of evOn(today)) if (!(e.done || []).includes(today)) tl.push({ t: e.time || "00:00", when: clk(e.time), what: e.title, c: (KIND[e.kind] || KIND.other)[1], href: "cal", past: e.time && (e.end || e.time) < hm });
+    (D.work || []).filter((t) => !t.done && t.due && t.due <= today).forEach((t) => tl.push({ t: t.due < today ? "99:96" : t.time || "99:97", when: t.due < today ? "Overdue" : t.time ? clk(t.time) : "Today", what: (t.store ? storeName(t.store) + " · " : "") + t.text, c: t.due < today ? "#ff9585" : "#e2c060", href: "work" }));
     open.filter((t) => t.due && t.due <= today).slice(0, 3).forEach((t) => tl.push({ t: "99:98", when: t.due < today ? "Overdue" : "Today", what: t.text, c: t.due < today ? "#ff9585" : "#d4af37", href: "todo" }));
     active.filter((p) => p.statusCode === 4 || (p.eta && p.eta.slice(0, 10) === today)).forEach((p) => tl.push({ t: "99:99", when: "Arriving", what: p.label || "Package", c: "#8fb8ff", href: "pkgs" }));
     tl.sort((x, y) => x.t.localeCompare(y.t));
@@ -341,7 +343,7 @@
       ${dial("guns", "shield", "Vault", gvt ? k(gvt.all) : "—", gvt ? 1 : 0, 6)}
       ${dial("keys", "lock", "Passwords", PW.key ? PW.vault.items.length : "", PW.key ? 1 : 0, 7)}
       ${dial("docs", "id", "Documents", docs ? docs.length : "", docs && docs.length ? docsOk / docs.length : 0, 8)}
-      ${dial("photos", "photo", "Photos", PV.albums ? PV.total || 0 : "", PV.albums ? 1 : 0, 9)}
+      ${dial("work", "wrench", "Meineke", (D.work || []).filter((x) => !x.done).length, 0, 9)}
     </div>`;
     const wishLine = wishes.length ? `<a class="wl" href="#wish" style="--i:10">${svg("gift")}<span>Wish list · ${wishes.length} item${wishes.length === 1 ? "" : "s"} · ${usd(wishes.reduce((t, w) => t + (+w.price || 0), 0), false)}</span><span class="chev">›</span></a>` : "";
 
@@ -417,6 +419,45 @@
       <button class="btn">Add</button></div><label class="duefield"><span>Due date</span><input name="due" type="date"></label></form>
       ${open.length ? `<div class="list">${open.map(row).join("")}</div>` : `<div class="empty">All clear.</div>`}
       ${done.length ? `<h3><button class="icon" data-act="todo-showdone" style="font-size:13px;color:var(--mute)">${ui.todoShowDone ? "▾" : "▸"} Done (${done.length})</button></h3>${ui.todoShowDone ? `<div class="list">${done.map(row).join("")}</div>` : ""}` : ""}`;
+  }
+
+  // ---------- Meineke Tasks (work) ----------
+  const WK = { store: "", showDone: false };
+  const STORES = () => [...new Set(["2871", "2935", "3047", "District", ...(D.work || []).map((t) => t.store).filter(Boolean)])];
+  const storeName = (s) => (/^\d+$/.test(s) ? "#" + s : s);
+  function wkWhen(t) {
+    const today = todayKey();
+    if (!t.due) return "";
+    const lbl = t.due === today ? "Today" : t.due === dAdd(today, 1) ? "Tomorrow" : fmtDay(t.due);
+    return `${lbl}${t.time ? " · " + clk(t.time) : ""}`;
+  }
+  function pWork() {
+    const today = todayKey(), wkEnd = dAdd(today, 7), all = D.work || [];
+    const open = all.filter((t) => !t.done && (!WK.store || t.store === WK.store)).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (a.priority === "high" ? -1 : 1));
+    const done = all.filter((t) => t.done && (!WK.store || t.store === WK.store)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const groups = [["Overdue", (t) => t.due && t.due < today], ["Today", (t) => t.due === today], ["This week", (t) => t.due > today && t.due <= wkEnd], ["Later", (t) => t.due > wkEnd], ["No date", (t) => !t.due]];
+    const row = (t) => `<div class="item wk ${t.done ? "done" : ""} ${t.priority === "high" ? "hi" : ""}">
+      <button class="chk ${t.done ? "on" : ""}" data-act="wk-toggle" data-id="${t.id}">${t.done ? "✓" : ""}</button>
+      <div class="grow" data-act="wk-edit" data-id="${t.id}" style="cursor:pointer"><div class="t">${t.priority === "high" ? '<span class="wk-hi">!</span>' : ""}${esc(t.text)}</div>
+      <div class="sub">${[t.store ? `<span class="wk-store">${esc(storeName(t.store))}</span>` : "", t.due ? `<span style="color:${!t.done && t.due < today ? "var(--bad)" : !t.done && t.due === today ? "var(--warn)" : ""}">${wkWhen(t)}</span>` : "", t.notes ? esc(t.notes.slice(0, 60)) : ""].filter(Boolean).join(" · ")}</div></div></div>`;
+    const counts = {}; all.filter((t) => !t.done).forEach((t) => t.store && (counts[t.store] = (counts[t.store] || 0) + 1));
+    const chips = `<div class="pv-chips"><button class="${!WK.store ? "on" : ""}" data-act="wk-store" data-id="">All ${all.filter((t) => !t.done).length}</button>${STORES().map((s) => `<button class="${WK.store === s ? "on" : ""}" data-act="wk-store" data-id="${esc(s)}">${esc(storeName(s))}${counts[s] ? " " + counts[s] : ""}</button>`).join("")}</div>`;
+    const add = `<form class="card wk-add" data-form="wk-add"><div class="row"><input name="text" placeholder="Add a Meineke task…" class="grow" required autocomplete="off"><button class="btn">Add</button></div>
+      <div class="wk-opts"><select name="store"><option value="">Store…</option>${STORES().map((s) => `<option value="${esc(s)}" ${WK.store === s ? "selected" : ""}>${esc(storeName(s))}</option>`).join("")}</select>
+      <input name="due" type="date"><label class="wk-flag"><input type="checkbox" name="hi"><span>! High</span></label></div></form>`;
+    const body = open.length ? groups.map(([g, f]) => { const l = open.filter(f); return l.length ? `<h3 class="pw-h">${g} <span>${l.length}</span></h3><div class="list">${l.map(row).join("")}</div>` : ""; }).join("") : `<div class="empty">Nothing open${WK.store ? " for " + esc(storeName(WK.store)) : ""}. Nice.</div>`;
+    return top("Meineke Tasks") + add + chips + body
+      + (done.length ? `<h3><button class="icon" data-act="wk-showdone" style="font-size:13px;color:var(--mute)">${WK.showDone ? "▾" : "▸"} Done (${done.length})</button></h3>${WK.showDone ? `<div class="list">${done.slice(0, 50).map(row).join("")}</div>` : ""}` : "");
+  }
+  function wkForm(t = {}) {
+    sheet(`<h2>${t.id ? "Edit" : "New"} Meineke task</h2><form data-form="wk-save" data-id="${t.id || ""}">
+      <label>Task</label><input name="text" value="${esc(t.text || "")}" required>
+      <label>Store</label><input name="store" list="wk-stores" value="${esc(t.store || "")}" placeholder="2871, 2935, 3047, District…"><datalist id="wk-stores">${STORES().map((s) => `<option value="${esc(s)}">`).join("")}</datalist>
+      <div class="cal-2"><div><label>Due</label><input type="date" name="due" value="${esc(t.due || "")}"></div><div><label>Time (optional)</label><input type="time" name="time" value="${esc(t.time || "")}"></div></div>
+      <label>Priority</label><select name="priority"><option value="normal">Normal</option><option value="high" ${t.priority === "high" ? "selected" : ""}>High</option></select>
+      <label class="doc-chk"><input type="checkbox" name="remind" ${t.remind === false ? "" : "checked"}> Push reminder on the due date (8 AM, or at the time you set)</label>
+      <label>Notes</label><textarea name="notes">${esc(t.notes || "")}</textarea>
+      <div class="actions">${t.id ? `<button type="button" class="btn danger" data-act="wk-del" data-id="${t.id}">Delete</button>` : ""}<span class="sp"></span><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save</button></div></form>`);
   }
 
   // ---------- Wish list ----------
@@ -1498,7 +1539,7 @@
       const r = await api("/gerald", { method: "POST", body: { messages: chat.msgs.slice(-16), pw } });
       chat.msgs.push({ role: "assistant", content: r.reply });
       if (opt.voice) speak(r.reply);
-      if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], status: {}, ...(await api("all")) }; render(); }
+      if (r.changed) { D = { todo: [], wish: [], pkgs: [], events: [], work: [], status: {}, ...(await api("all")) }; render(); }
     } catch (e) { if (e.message !== "signin") chat.msgs.push({ role: "assistant", content: e.message }); }
     chat.busy = false;
     if (document.getElementById("gmodal")) { openGerald(); document.querySelector("#gmodal input[name=q]")?.focus(); }
@@ -1572,6 +1613,11 @@
         case "pv-adel": if (confirmDel()) { await api(`vault/albums/${id}`, { method: "DELETE" }); closeSheet(); PV.album = null; PV.albums = null; render(); toast("Album deleted"); } break;
         case "pv-open": pvView(+id); break;
         case "more": e.preventDefault(); moreSheet(); break;
+        case "wk-store": WK.store = id; render(); break;
+        case "wk-showdone": WK.showDone = !WK.showDone; render(); break;
+        case "wk-toggle": { const t = D.work.find((x) => x.id === id); await save("work", { ...t, done: !t.done }); break; }
+        case "wk-edit": wkForm(D.work.find((x) => x.id === id)); break;
+        case "wk-del": if (confirmDel()) { await remove("work", id); closeSheet(); } break;
         case "tl": e.preventDefault(); location.hash = id; break;
         case "cal-day": CAL.sel = id; CAL.month = id.slice(0, 7); render(); break;
         case "cal-mo": { const [yy, mm] = CAL.month.split("-").map(Number), t2 = new Date(yy, mm - 1 + +id, 1); CAL.month = dkey(t2).slice(0, 7); render(); break; }
@@ -1648,6 +1694,8 @@
           PV.albums = null; closeSheet(); render(); break;
         }
         case "todo-add": await save("todo", { text: v.text, due: v.due }); break;
+        case "wk-add": await save("work", { text: v.text, store: v.store || WK.store, due: v.due, priority: v.hi ? "high" : "normal", remind: true }); break;
+        case "wk-save": { const t = f.dataset.id ? D.work.find((x) => x.id === f.dataset.id) : {}; await save("work", { ...t, text: v.text, store: v.store.trim(), due: v.due, time: v.time, priority: v.priority, remind: !!v.remind, notes: v.notes }); closeSheet(); break; }
         case "todo-save": { const t = D.todo.find((x) => x.id === id); await save("todo", { ...t, text: v.text, due: v.due, notes: v.notes }); closeSheet(); break; }
         case "wish-save": { const w = D.wish.find((x) => x.id === id) || {}; await save("wish", { ...w, id, ...v }); closeSheet(); break; }
         case "pkg-add": await save("pkgs", { tracking: v.tracking, label: v.label, from: v.from }); toast("Tracking"); break;

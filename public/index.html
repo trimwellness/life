@@ -523,6 +523,16 @@ form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:n
 @keyframes gtalk{50%{box-shadow:0 0 0 7px rgba(212,175,55,.25),0 0 22px rgba(212,175,55,.5)}}
 .ask-mic{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(212,175,55,.45);background:rgba(0,0,0,.35)}
 .ask-mic svg{width:19px;height:19px;stroke:var(--gold2)}
+
+/* Meineke Tasks */
+.wk-add .wk-opts{display:flex;gap:8px;margin-top:10px;align-items:center}
+.wk-add .wk-opts select,.wk-add .wk-opts input[type=date]{flex:1;min-width:0;margin:0;font-size:14px;padding:9px 10px;min-height:40px;-webkit-appearance:none;appearance:none}
+.wk-flag{flex:none;margin:0;text-transform:none;letter-spacing:0}.wk-flag input{position:absolute;opacity:0;pointer-events:none}
+.wk-flag span{display:inline-block;padding:9px 12px;border-radius:999px;border:1px solid rgba(255,122,107,.4);color:#ff9585;font-size:13px;font-weight:600}
+.wk-flag input:checked+span{background:#ff7a6b;color:#1a0d0a;border-color:transparent}
+.wk-store{display:inline-block;padding:1px 8px;border-radius:999px;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.35);color:var(--gold2);font-size:11.5px;font-weight:600;letter-spacing:.04em}
+.wk-hi{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:7px;border-radius:50%;background:#ff7a6b;color:#1a0d0a;font-size:12px;font-weight:800;vertical-align:1px}
+.item.wk.hi{box-shadow:inset 3px 0 0 #ff7a6b}
 </style>
 </head>
 <body>
@@ -545,6 +555,6 @@ form[data-form="doc-save"] input[type=date]{-webkit-appearance:none;appearance:n
     setTimeout(function () { var a = document.getElementById("app"); if (a && !a.children.length && !document.getElementById("boot-err")) show("Nothing rendered after 8 seconds."); }, 8000);
   })();
 </script>
-<script src="/app.js?v=51"></script>
+<script src="/app.js?v=52"></script>
 </body>
 </html>
